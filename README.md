@@ -1,6 +1,6 @@
-# polygen: An Efficient Framework for Polycrystal Generation and Cohesive Zone Modeling in Arbitrary Domains
+# PolyGen: An Efficient Framework for Polycrystal Generation and Cohesive Zone Modeling in Arbitrary Domains
 
-This project aims to generalize polycrystal generation and polygonal meshing in any arbitrary 2D domains through `Constrained Voronoi Tessellation` for Finite Element Method (FEM) and Cohesive Zone Modeling (CZM). `polygen` also provides the functionality to adjust polygonal mesh to insert finite-thickness cohesive zone and offers efficient datastructures to integrate with Abaqus CAE. Additionally, this package also offers an excellent tool for triangular meshing of complex 2D domains.
+This project aims to generalize polycrystal generation and polygonal meshing in any arbitrary 2D domains through `Constrained Voronoi Tessellation` for Finite Element Method (FEM) and Cohesive Zone Modeling (CZM). `PolyGen` also provides the functionality to adjust polygonal mesh to insert finite-thickness cohesive zone and offers efficient datastructures to integrate with Abaqus CAE. Additionally, this package also offers an excellent tool for triangular meshing of complex 2D domains.
 
 ## Features
 
@@ -22,11 +22,11 @@ pip install -e .
 
 ## Accessing Documentation
 
-To access the documentation for any function, class, or method in the project, please visit the official documentation page of polygen [View the Docs](https://Rumi381.github.io/PolyGen/)
+To access the documentation for any function, class, or method in the project, please visit the official documentation page of PolyGen [View the Docs](https://Rumi381.github.io/PolyGen/)
 
 ## Example Usage
 
-Check out the detailed examples and usages of different functionalities in the [polygen Jupyter Notebook](examples/polygen.ipynb).
+Check out the detailed examples and usages of different functionalities in the [PolyGen Jupyter Notebook](examples/polygen.ipynb).
 
 ## Running `polygen` from the command line
 If you have set up the input file with the desired functionalites, you can run the following command in the terminal (assuming your input file is in the `examples` directory inside your working directory):
@@ -42,7 +42,7 @@ The `input.in` file should contain the necessary inputs for running the desired 
 #### Parameters
 
 - **boundary** : str or dict
-    The path to the `mesio` supported mesh file defining the boundary or predefined geometry object provided by `polygen`
+    The path to the `mesio` supported mesh file defining the boundary or predefined geometry object provided by `PolyGen`
 - **N_points** : int
     Number of initial seed points for the Voronoi diagram
 - **points_seed** : int, optional
@@ -84,7 +84,7 @@ saveData = True
 
 ## Citation
 
-If you use `polygen` in your research, please cite our paper:
+If you use `PolyGen` in your research, please cite our paper:
 
 Rumi, M.J.U., Han, HC., Ye, J. et al. Polygen: an efficient framework for polycrystals generation and cohesive zone modeling in arbitrary domains. Engineering with Computers (2025). https://doi.org/10.1007/s00366-025-02180-6
 
