@@ -1,0 +1,856 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polygen.polygen2d.geometry &mdash; polygen 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://Rumi381.github.io/PolyGen/_modules/polygen/polygen2d/geometry.html" />
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/custom.js?v=14139ab5"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            polygen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">polygen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">polygen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">polygen.polygen2d.geometry</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for polygen.polygen2d.geometry</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">Point</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.affinity</span><span class="w"> </span><span class="kn">import</span> <span class="n">scale</span><span class="p">,</span> <span class="n">rotate</span>
+
+<div class="viewcode-block" id="Geometry">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Geometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for generating various geometric shapes as Shapely polygons.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    circle(center, radius=None, point=None, name=&#39;Circle&#39;)</span>
+<span class="sd">        Create a circular region given the center and either a radius or a point on the circle.</span>
+<span class="sd">    </span>
+<span class="sd">    annular_region(center_outer, radius_outer=None, point_outer=None, center_inner=None, radius_inner=None, point_inner=None, name=&#39;AnnularRegion&#39;)</span>
+<span class="sd">        Create an annular region (a ring-shaped region) with specified outer and inner circles.</span>
+<span class="sd">    </span>
+<span class="sd">    annular_region_arc_WithStraightEnds(...)</span>
+<span class="sd">        Create an annular region arc with straight ends using circular arcs.</span>
+<span class="sd">    </span>
+<span class="sd">    annular_region_arc_WithRoundedEnds(...)</span>
+<span class="sd">        Create an annular region arc with smoothly closed ends using circular arcs.</span>
+<span class="sd">    </span>
+<span class="sd">    ellipse(center, semi_major_axis, semi_minor_axis, rotation=0, name=&#39;Ellipse&#39;)</span>
+<span class="sd">        Create an elliptical region.</span>
+<span class="sd">    </span>
+<span class="sd">    annular_ellipse(...)</span>
+<span class="sd">        Create an annular elliptical region.</span>
+<span class="sd">    </span>
+<span class="sd">    rectangle(width, height, name=&#39;Rectangle&#39;)</span>
+<span class="sd">        Create a rectangular region using width and height.</span>
+<span class="sd">    </span>
+<span class="sd">    rectangle_corners(point1, point2, name=&#39;RectangleCorners&#39;)</span>
+<span class="sd">        Create a rectangular region using two opposite corners.</span>
+<span class="sd">    </span>
+<span class="sd">    square(center, side_length, name=&#39;Square&#39;)</span>
+<span class="sd">        Create a square region given the center and side length.</span>
+<span class="sd">    </span>
+<span class="sd">    regular_polygon(center, radius, num_sides, name=&#39;RegularPolygon&#39;)</span>
+<span class="sd">        Create a regular polygon with a given number of sides.</span>
+<span class="sd">    </span>
+<span class="sd">    triangle(point1, point2, point3, name=&#39;Triangle&#39;)</span>
+<span class="sd">        Create a triangular region using three vertices.</span>
+<span class="sd">    </span>
+<span class="sd">    pentagon(center, radius, name=&#39;Pentagon&#39;)</span>
+<span class="sd">        Create a pentagonal region.</span>
+<span class="sd">    </span>
+<span class="sd">    hexagon(center, radius, name=&#39;Hexagon&#39;)</span>
+<span class="sd">        Create a hexagonal region.</span>
+<span class="sd">    </span>
+<span class="sd">    octagon(center, radius, name=&#39;Octagon&#39;)</span>
+<span class="sd">        Create an octagonal region.</span>
+<span class="sd">    </span>
+<span class="sd">    star(center, outer_radius, inner_radius, num_points, name=&#39;Star&#39;)</span>
+<span class="sd">        Create a star-shaped polygon.</span>
+<span class="sd">    </span>
+<span class="sd">    trapezoid(base1, base2, height, name=&#39;Trapezoid&#39;)</span>
+<span class="sd">        Create a trapezoidal region given the lengths of the bases and height.</span>
+<span class="sd">    </span>
+<span class="sd">    parallelogram(base, side_length, height, name=&#39;Parallelogram&#39;)</span>
+<span class="sd">        Create a parallelogram given the base, side length, and height.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from voronoi_meshing.geometry import Geometry</span>
+<span class="sd">    &gt;&gt;&gt; </span>
+<span class="sd">    &gt;&gt;&gt; # Create a circle</span>
+<span class="sd">    &gt;&gt;&gt; circle1 = Geometry.circle((0, 0), radius=5, name=&#39;CircleByRadius&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; circle2 = Geometry.circle((0, 0), point=(3, 4), name=&#39;CircleByPoint&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; </span>
+<span class="sd">    &gt;&gt;&gt; # Create an annular region</span>
+<span class="sd">    &gt;&gt;&gt; annular1 = Geometry.annular_region((0, 0), radius_outer=10, center_inner=(0, 0),</span>
+<span class="sd">    ...                                   radius_inner=5, name=&#39;AnnularByRadius&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; annular2 = Geometry.annular_region((0, 0), point_outer=(7, 7), center_inner=(0, -1),</span>
+<span class="sd">    ...                                   point_inner=(3, 4), name=&#39;AnnularByPoint&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; </span>
+<span class="sd">    &gt;&gt;&gt; # Create an elliptical region</span>
+<span class="sd">    &gt;&gt;&gt; ellipse = Geometry.ellipse(center=(0, 0), semi_major_axis=7,</span>
+<span class="sd">    ...                          semi_minor_axis=4, rotation=30, name=&#39;Ellipse&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; </span>
+<span class="sd">    &gt;&gt;&gt; # Create a rectangular region</span>
+<span class="sd">    &gt;&gt;&gt; rectangle = Geometry.rectangle(width=10, height=5, name=&#39;Rectangle&#39;)</span>
+<span class="sd">    &gt;&gt;&gt; </span>
+<span class="sd">    &gt;&gt;&gt; # Create a star-shaped region</span>
+<span class="sd">    &gt;&gt;&gt; star = Geometry.star(center=(0, 0), outer_radius=7,</span>
+<span class="sd">    ...                    inner_radius=3, num_points=5, name=&#39;Star&#39;)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Each method returns a dictionary containing:</span>
+<span class="sd">        - &#39;polygon&#39;: The Shapely polygon object</span>
+<span class="sd">        - &#39;name&#39;: The name of the geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Geometry.circle">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.circle">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">circle</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Circle&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a circular region.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the circle.</span>
+<span class="sd">        - radius: Radius of the circle (optional if point is provided).</span>
+<span class="sd">        - point: Tuple (x, y) representing a point on the circle (optional if radius is provided).</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - circle1 = Geometry.circle((0, 0), radius=5, name=&#39;CircleByRadius&#39;) # With center and radius</span>
+
+<span class="sd">        - circle2 = Geometry.circle((0, 0), point=(3, 4), name=&#39;CircleByPoint&#39;) # With center and a point on the perimeter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">radius</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius&#39; or &#39;point&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point</span><span class="p">))</span>
+        <span class="n">center_point</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center</span><span class="p">)</span>
+        <span class="n">circle</span> <span class="o">=</span> <span class="n">center_point</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">circle</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.annular_region">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.annular_region">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">annular_region</span><span class="p">(</span><span class="n">center_outer</span><span class="p">,</span> <span class="n">radius_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;AnnularRegion&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an annular region (a ring-shaped region).</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center_outer: Tuple (x, y) representing the center of the outer circle.</span>
+<span class="sd">        - radius_outer: Radius of the outer circle (optional if point_outer is provided).</span>
+<span class="sd">        - point_outer: Tuple (x, y) representing a point on the outer circle (optional if radius_outer is provided).</span>
+<span class="sd">        - center_inner: Tuple (x, y) representing the center of the inner circle.</span>
+<span class="sd">        - radius_inner: Radius of the inner circle (optional if point_inner is provided).</span>
+<span class="sd">        - point_inner: Tuple (x, y) representing a point on the inner circle (optional if radius_inner is provided).</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - annular1 = Geometry.annular_region((0, 0), radius_outer=10, center_inner=(0, 0), radius_inner=5, name=&#39;AnnularByRadius&#39;) # With center and radius</span>
+
+<span class="sd">        - annular2 = Geometry.annular_region((0, 0), point_outer=(7, 7), center_inner=(0, -1), point_inner=(3, 4), name=&#39;AnnularByPoint&#39;) # With center and a point on the perimeter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius_outer&#39; or &#39;point_outer&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius_inner</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point_inner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius_inner&#39; or &#39;point_inner&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_outer</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_outer</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point_outer</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">radius_inner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_inner</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_inner</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point_inner</span><span class="p">))</span>
+        
+        <span class="n">outer_circle</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_outer</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius_outer</span><span class="p">)</span>
+        <span class="n">inner_circle</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_inner</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius_inner</span><span class="p">)</span>
+        <span class="n">annular_region</span> <span class="o">=</span> <span class="n">outer_circle</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">inner_circle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">annular_region</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+    
+<div class="viewcode-block" id="Geometry.annular_region_arc_WithStraightEnds">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.annular_region_arc_WithStraightEnds">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">annular_region_arc_WithStraightEnds</span><span class="p">(</span><span class="n">center_outer</span><span class="p">,</span> <span class="n">radius_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;AnnularRegionArcWithStraightEnds&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an annular region arc where the ends are closed by straight lines.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center_outer: Tuple (x, y) representing the center of the outer circle.</span>
+<span class="sd">        - radius_outer: Radius of the outer circle (optional if point_outer is provided).</span>
+<span class="sd">        - point_outer: Tuple (x, y) representing a point on the outer circle (optional if radius_outer is provided).</span>
+<span class="sd">        - center_inner: Tuple (x, y) representing the center of the inner circle.</span>
+<span class="sd">        - radius_inner: Radius of the inner circle (optional if point_inner is provided).</span>
+<span class="sd">        - point_inner: Tuple (x, y) representing a point on the inner circle (optional if radius_inner is provided).</span>
+<span class="sd">        - theta: Angle in degrees of the arc.</span>
+<span class="sd">        - axis: Axis of symmetry (&#39;x&#39; or &#39;y&#39; or &#39;alpha&#39;).</span>
+<span class="sd">        - alpha: Angle in degrees of the axis of symmetry with respect to the positive x-axis.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - annular_arc_straight1 = Geometry.annular_region_arc_WithStraightEnds((0, 0), radius_outer=10, center_inner=(0, 0), radius_inner=5, theta=240, axis=&#39;y&#39;, name=&#39;ArcByRadiusY&#39;) # Creates a 240 degree annular arc With center and radius and symmetric about Y axis</span>
+<span class="sd">        </span>
+<span class="sd">        - annular_arc_straight2 = Geometry.annular_region_arc_WithStraightEnds((0, 0), point_outer=(7, 7), center_inner=(0, 0), point_inner=(3, 4), theta=240, axis=&#39;x&#39;, name=&#39;ArcByPointX&#39;) # Creates a 240 degree annular arc With center and a point on the perimeter and symmetric about Y axis</span>
+
+<span class="sd">        - annular_arc_straight3 = Geometry.annular_region_arc_WithStraightEnds((0, 0), radius_outer=10, center_inner=(0, -1), radius_inner=5, theta=240, alpha=135, name=&#39;ArcByRadiusAlpha&#39;) # Creates a 240 degree annular arc With center and a radius and symmetric about a axis which makes 135 degree angle with posivive X axis</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius_outer&#39; or &#39;point_outer&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius_inner</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point_inner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius_inner&#39; or &#39;point_inner&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_outer</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_outer</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point_outer</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">radius_inner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_inner</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_inner</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point_inner</span><span class="p">))</span>
+
+        <span class="n">outer_circle</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_outer</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius_outer</span><span class="p">)</span>
+        <span class="n">inner_circle</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_inner</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius_inner</span><span class="p">)</span>
+        <span class="n">annular_region</span> <span class="o">=</span> <span class="n">outer_circle</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">inner_circle</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>
+            <span class="n">angle_offset</span> <span class="o">=</span> <span class="mi">90</span>
+        <span class="k">elif</span> <span class="n">axis</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+            <span class="n">angle_offset</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">alpha</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">angle_offset</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Axis must be &#39;x&#39;, &#39;y&#39;, or &#39;alpha&#39; must be provided.&quot;</span><span class="p">)</span>
+
+        <span class="n">theta_rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">half_theta_rad</span> <span class="o">=</span> <span class="n">theta_rad</span> <span class="o">/</span> <span class="mi">2</span>
+
+        <span class="n">arc_coords</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">angle</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">half_theta_rad</span><span class="p">,</span> <span class="n">half_theta_rad</span><span class="p">,</span> <span class="mi">100</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angle</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angle</span><span class="p">)</span>
+            <span class="n">arc_coords</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+        <span class="n">arc_coords</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">sector</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">arc_coords</span><span class="p">)</span>
+
+        <span class="n">sector</span> <span class="o">=</span> <span class="n">rotate</span><span class="p">(</span><span class="n">sector</span><span class="p">,</span> <span class="n">angle_offset</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">annular_arc</span> <span class="o">=</span> <span class="n">annular_region</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">sector</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">annular_arc</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.annular_region_arc_WithRoundedEnds">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.annular_region_arc_WithRoundedEnds">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">annular_region_arc_WithRoundedEnds</span><span class="p">(</span><span class="n">center_outer</span><span class="p">,</span> <span class="n">radius_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point_outer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">center_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">radius_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">point_inner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">theta</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;AnnularRegionArcWithRoundedEnds&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an annular region arc with smoothly closed ends using circular arcs.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center_outer, center_inner: Centers of the outer and inner circles.</span>
+<span class="sd">        - radius_outer, radius_inner: Radii of the outer and inner circles (optional if point_outer and point_inner are provided).</span>
+<span class="sd">        - point_outer, point_inner: Points on the outer and inner circles (optional if radius_outer and radius_inner are provided).</span>
+<span class="sd">        - theta: Angular extent of the arc, in degrees.</span>
+<span class="sd">        - axis: &#39;x&#39; or &#39;y&#39;, denoting the symmetry axis.</span>
+<span class="sd">        - alpha: Angle in degrees of the axis of symmetry with respect to the positive x-axis.</span>
+<span class="sd">        - name: Optional name for the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary containing the polygon and its name.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - annular_arc_rounded1 = Geometry.annular_region_arc_WithRoundedEnds((0, 0), radius_outer=10, center_inner=(0, 0), radius_inner=5, theta=240, axis=&#39;y&#39;, name=&#39;RoundedArcByRadiusY&#39;) # Creates a 240 degree annular arc With center and radius and symmetric about Y axis</span>
+<span class="sd">        </span>
+<span class="sd">        - annular_arc_rounded2 = Geometry.annular_region_arc_WithRoundedEnds((0, 0), point_outer=(7, 7), center_inner=(0, 0), point_inner=(3, 4), theta=240, axis=&#39;x&#39;, name=&#39;RoundedArcByPointX&#39;) # Creates a 240 degree annular arc With center and a point on the perimeter and symmetric about Y axis</span>
+
+<span class="sd">        - annular_arc_rounded3 = Geometry.annular_region_arc_WithRoundedEnds((0, 0), radius_outer=10, center_inner=(0, -1), radius_inner=5, theta=180, alpha=-45, name=&#39;RoundedArcByRadiusAlpha&#39;) # Creates a 240 degree annular arc With center and a radius and symmetric about a axis which makes -45 degree angle with posivive X axis</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius_outer&#39; or &#39;point_outer&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius_inner</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">point_inner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Either &#39;radius_inner&#39; or &#39;point_inner&#39; must be provided.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">radius_outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_outer</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_outer</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point_outer</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">radius_inner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">radius_inner</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_inner</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point_inner</span><span class="p">))</span>
+
+        <span class="c1"># Create the full annular region</span>
+        <span class="n">outer_circle</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_outer</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius_outer</span><span class="p">)</span>
+        <span class="n">inner_circle</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center_inner</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius_inner</span><span class="p">)</span>
+        <span class="n">annular_region</span> <span class="o">=</span> <span class="n">outer_circle</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">inner_circle</span><span class="p">)</span>
+
+        <span class="c1"># Adjust the rotation based on the axis</span>
+        <span class="k">if</span> <span class="n">axis</span> <span class="o">==</span> <span class="s1">&#39;y&#39;</span><span class="p">:</span>
+            <span class="n">angle_offset</span> <span class="o">=</span> <span class="mi">90</span>
+        <span class="k">elif</span> <span class="n">axis</span> <span class="o">==</span> <span class="s1">&#39;x&#39;</span><span class="p">:</span>
+            <span class="n">angle_offset</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">alpha</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">angle_offset</span> <span class="o">=</span> <span class="n">alpha</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Axis must be &#39;x&#39;, &#39;y&#39;, or &#39;alpha&#39; must be provided.&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Define the sector mask</span>
+        <span class="n">start_angle</span> <span class="o">=</span> <span class="o">-</span><span class="n">theta</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">angle_offset</span>
+        <span class="n">end_angle</span> <span class="o">=</span> <span class="n">theta</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">angle_offset</span>
+        <span class="n">sector_mask</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([</span>
+            <span class="n">center_outer</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">[(</span><span class="n">center_outer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">ang</span><span class="p">))</span> <span class="o">*</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span>
+               <span class="n">center_outer</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">ang</span><span class="p">))</span> <span class="o">*</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+              <span class="k">for</span> <span class="n">ang</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start_angle</span><span class="p">,</span> <span class="n">end_angle</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">100</span><span class="p">)],</span>
+            <span class="n">center_outer</span>
+        <span class="p">])</span>
+
+        <span class="c1"># Create the annular arc by intersecting the annular region with the sector mask</span>
+        <span class="n">annular_arc</span> <span class="o">=</span> <span class="n">annular_region</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">sector_mask</span><span class="p">)</span>
+
+        <span class="c1"># Calculate the endpoints of the cuts</span>
+        <span class="n">start_cut_angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">start_angle</span><span class="p">)</span>
+        <span class="n">end_cut_angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">end_angle</span><span class="p">)</span>
+
+        <span class="n">outer_start_cut</span> <span class="o">=</span> <span class="p">(</span><span class="n">center_outer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">start_cut_angle</span><span class="p">),</span>
+                           <span class="n">center_outer</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">start_cut_angle</span><span class="p">))</span>
+        <span class="n">outer_end_cut</span> <span class="o">=</span> <span class="p">(</span><span class="n">center_outer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">end_cut_angle</span><span class="p">),</span>
+                         <span class="n">center_outer</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_outer</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">end_cut_angle</span><span class="p">))</span>
+
+        <span class="n">inner_start_cut</span> <span class="o">=</span> <span class="p">(</span><span class="n">center_inner</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_inner</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">start_cut_angle</span><span class="p">),</span>
+                           <span class="n">center_inner</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_inner</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">start_cut_angle</span><span class="p">))</span>
+        <span class="n">inner_end_cut</span> <span class="o">=</span> <span class="p">(</span><span class="n">center_inner</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_inner</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">end_cut_angle</span><span class="p">),</span>
+                         <span class="n">center_inner</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">radius_inner</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">end_cut_angle</span><span class="p">))</span>
+
+        <span class="c1"># Create circles with the endpoints as diameters</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">create_circle_with_diameter</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">):</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="p">((</span><span class="n">p1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">p2</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="n">p1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">p2</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p1</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p2</span><span class="p">))</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="k">return</span> <span class="n">Point</span><span class="p">(</span><span class="n">center</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">radius</span><span class="p">)</span>
+
+        <span class="n">outer_tangent_circle</span> <span class="o">=</span> <span class="n">create_circle_with_diameter</span><span class="p">(</span><span class="n">outer_start_cut</span><span class="p">,</span> <span class="n">inner_start_cut</span><span class="p">)</span>
+        <span class="n">inner_tangent_circle</span> <span class="o">=</span> <span class="n">create_circle_with_diameter</span><span class="p">(</span><span class="n">outer_end_cut</span><span class="p">,</span> <span class="n">inner_end_cut</span><span class="p">)</span>
+
+        <span class="c1"># Combine the annular arc with the tangent arcs</span>
+        <span class="n">final_shape</span> <span class="o">=</span> <span class="n">unary_union</span><span class="p">([</span><span class="n">annular_arc</span><span class="p">,</span> <span class="n">outer_tangent_circle</span><span class="p">,</span> <span class="n">inner_tangent_circle</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">final_shape</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+    
+<div class="viewcode-block" id="Geometry.ellipse">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.ellipse">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ellipse</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">semi_major_axis</span><span class="p">,</span> <span class="n">semi_minor_axis</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Ellipse&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an elliptical region.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) for the center of the ellipse.</span>
+<span class="sd">        - semi_major_axis: Length of the semi-major axis.</span>
+<span class="sd">        - semi_minor_axis: Length of the semi-minor axis.</span>
+<span class="sd">        - rotation: Rotation angle in degrees, counterclockwise.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - ellipse = Geometry.ellipse(center=(0, 0), semi_major_axis=7, semi_minor_axis=4, rotation=30, name=&#39;Ellipse&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ellipse</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ellipse</span> <span class="o">=</span> <span class="n">scale</span><span class="p">(</span><span class="n">ellipse</span><span class="p">,</span> <span class="n">xfact</span><span class="o">=</span><span class="n">semi_major_axis</span><span class="p">,</span> <span class="n">yfact</span><span class="o">=</span><span class="n">semi_minor_axis</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">center</span><span class="p">)</span>
+        <span class="n">ellipse</span> <span class="o">=</span> <span class="n">rotate</span><span class="p">(</span><span class="n">ellipse</span><span class="p">,</span> <span class="n">rotation</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">center</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">ellipse</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.annular_ellipse">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.annular_ellipse">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">annular_ellipse</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">semi_major_axis_outer</span><span class="p">,</span> <span class="n">semi_minor_axis_outer</span><span class="p">,</span> <span class="n">semi_major_axis_inner</span><span class="p">,</span> <span class="n">semi_minor_axis_inner</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;AnnularEllipse&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an annular elliptical region.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the ellipses.</span>
+<span class="sd">        - semi_major_axis_outer: Semi-major axis of the outer ellipse.</span>
+<span class="sd">        - semi_minor_axis_outer: Semi-minor axis of the outer ellipse.</span>
+<span class="sd">        - semi_major_axis_inner: Semi-major axis of the inner ellipse.</span>
+<span class="sd">        - semi_minor_axis_inner: Semi-minor axis of the inner ellipse.</span>
+<span class="sd">        - rotation: Rotation angle in degrees, counterclockwise.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - annular_ellipse = Geometry.annular_ellipse(center=(0, 0), semi_major_axis_outer=10, semi_minor_axis_outer=6, semi_major_axis_inner=7, semi_minor_axis_inner=4, rotation=30, name=&#39;AnnularEllipse&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">outer_ellipse</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">outer_ellipse</span> <span class="o">=</span> <span class="n">scale</span><span class="p">(</span><span class="n">outer_ellipse</span><span class="p">,</span> <span class="n">xfact</span><span class="o">=</span><span class="n">semi_major_axis_outer</span><span class="p">,</span> <span class="n">yfact</span><span class="o">=</span><span class="n">semi_minor_axis_outer</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">center</span><span class="p">)</span>
+        <span class="n">outer_ellipse</span> <span class="o">=</span> <span class="n">rotate</span><span class="p">(</span><span class="n">outer_ellipse</span><span class="p">,</span> <span class="n">rotation</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">center</span><span class="p">)</span>
+        
+        <span class="n">inner_ellipse</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">center</span><span class="p">)</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">inner_ellipse</span> <span class="o">=</span> <span class="n">scale</span><span class="p">(</span><span class="n">inner_ellipse</span><span class="p">,</span> <span class="n">xfact</span><span class="o">=</span><span class="n">semi_major_axis_inner</span><span class="p">,</span> <span class="n">yfact</span><span class="o">=</span><span class="n">semi_minor_axis_inner</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">center</span><span class="p">)</span>
+        <span class="n">inner_ellipse</span> <span class="o">=</span> <span class="n">rotate</span><span class="p">(</span><span class="n">inner_ellipse</span><span class="p">,</span> <span class="n">rotation</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">center</span><span class="p">)</span>
+        
+        <span class="n">annular_ellipse</span> <span class="o">=</span> <span class="n">outer_ellipse</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">inner_ellipse</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">annular_ellipse</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.rectangle">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.rectangle">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rectangle</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Rectangle&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a rectangular region using width and height.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - width: Width of the rectangle.</span>
+<span class="sd">        - height: Height of the rectangle.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - rectangle = Geometry.rectangle(width=10, height=5, name=&#39;Rectangle&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">rectangle</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">height</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">rectangle</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.rectangle_corners">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.rectangle_corners">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rectangle_corners</span><span class="p">(</span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;RectangleCorners&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a rectangular region using two opposite corners.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - point1: Tuple (x, y) for one corner of the rectangle.</span>
+<span class="sd">        - point2: Tuple (x, y) for the opposite corner of the rectangle.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - rectangle_corners = Geometry.rectangle_corners(point1=(0, 0), point2=(10, 5), name=&#39;RectangleCorners&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span> <span class="o">=</span> <span class="n">point1</span>
+        <span class="n">x2</span><span class="p">,</span> <span class="n">y2</span> <span class="o">=</span> <span class="n">point2</span>
+        <span class="n">rectangle</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="n">y1</span><span class="p">),</span> <span class="p">(</span><span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">),</span> <span class="p">(</span><span class="n">x1</span><span class="p">,</span> <span class="n">y2</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">rectangle</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.square">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.square">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">square</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">side_length</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Square&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a square region given the center and side length.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the square.</span>
+<span class="sd">        - side_length: Length of the sides of the square.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - square = Geometry.square(center=(0, 0), side_length=6, name=&#39;Square&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">half_side</span> <span class="o">=</span> <span class="n">side_length</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">square</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([</span>
+            <span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">half_side</span><span class="p">,</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">half_side</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">half_side</span><span class="p">,</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">half_side</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">half_side</span><span class="p">,</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">half_side</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">half_side</span><span class="p">,</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">half_side</span><span class="p">)</span>
+        <span class="p">])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">square</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.regular_polygon">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.regular_polygon">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">regular_polygon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">num_sides</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;RegularPolygon&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a regular polygon with a given number of sides.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the polygon.</span>
+<span class="sd">        - radius: Radius of the circumscribed circle.</span>
+<span class="sd">        - num_sides: Number of sides of the polygon.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - n = 18</span>
+<span class="sd">        - n_sided_polygon = Geometry.regular_polygon(center=(0, 0), radius=5, num_sides=n, name=&#39;Pentagon&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cx</span><span class="p">,</span> <span class="n">cy</span> <span class="o">=</span> <span class="n">center</span>
+        <span class="n">vertices</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">cx</span> <span class="o">+</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">i</span> <span class="o">/</span> <span class="n">num_sides</span><span class="p">),</span> <span class="n">cy</span> <span class="o">+</span> <span class="n">radius</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">i</span> <span class="o">/</span> <span class="n">num_sides</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_sides</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">regular_polygon</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">regular_polygon</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.triangle">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.triangle">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">triangle</span><span class="p">(</span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span><span class="p">,</span> <span class="n">point3</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Triangle&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a triangular region using three vertices.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - point1: Tuple (x, y) for the first vertex of the triangle.</span>
+<span class="sd">        - point2: Tuple (x, y) for the second vertex of the triangle.</span>
+<span class="sd">        - point3: Tuple (x, y) for the third vertex of the triangle.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - trinangle = Geometry.triangle(point1=(1,2), point2=(5,7,2), point3=(9,8), name=&#39;Triangle&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">triangle</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([</span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span><span class="p">,</span> <span class="n">point3</span><span class="p">])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">triangle</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.pentagon">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.pentagon">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pentagon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Pentagon&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a pentagonal region.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the pentagon.</span>
+<span class="sd">        - radius: Radius of the circumscribed circle.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - pentagon = Geometry.pentagon(center=(0, 0), radius=5, name=&#39;Hexagon&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">regular_polygon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Geometry.hexagon">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.hexagon">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">hexagon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Hexagon&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a hexagonal region.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the hexagon.</span>
+<span class="sd">        - radius: Radius of the circumscribed circle.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - hexagon = Geometry.hexagon(center=(0, 0), radius=5, name=&#39;Hexagon&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">regular_polygon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Geometry.octagon">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.octagon">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">octagon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Octagon&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create an octagonal region.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the octagon.</span>
+<span class="sd">        - radius: Radius of the circumscribed circle.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - octagon = Geometry.octagon(center=(0, 0), radius=5, name=&#39;Octagon&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">regular_polygon</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Geometry.star">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.star">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">star</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="n">outer_radius</span><span class="p">,</span> <span class="n">inner_radius</span><span class="p">,</span> <span class="n">num_points</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Star&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a star-shaped polygon.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - center: Tuple (x, y) representing the center of the star.</span>
+<span class="sd">        - outer_radius: Radius of the outer vertices.</span>
+<span class="sd">        - inner_radius: Radius of the inner vertices.</span>
+<span class="sd">        - num_points: Number of points (or tips) of the star.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - star = Geometry.star(center=(0, 0), outer_radius=7, inner_radius=3, num_points=5, name=&#39;Star&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">angle</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">num_points</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">num_points</span><span class="p">):</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">outer_radius</span> <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">inner_radius</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">center</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">r</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">angle</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">center</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">r</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">angle</span><span class="p">)</span>
+            <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+        <span class="n">star</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">star</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.trapezoid">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.trapezoid">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">trapezoid</span><span class="p">(</span><span class="n">base1</span><span class="p">,</span> <span class="n">base2</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Trapezoid&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a trapezoidal region given the lengths of the bases and height.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - base1: Length of the first base.</span>
+<span class="sd">        - base2: Length of the second base.</span>
+<span class="sd">        - height: Height of the trapezoid.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - trapezoid = Geometry.trapezoid(base1=8, base2=5, height=4, name=&#39;Trapezoid&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">half_diff</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">base1</span> <span class="o">-</span> <span class="n">base2</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">base1</span> <span class="o">&gt;</span> <span class="n">base2</span><span class="p">:</span>
+            <span class="n">trapezoid</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">base1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">base2</span> <span class="o">+</span> <span class="n">half_diff</span><span class="p">,</span> <span class="n">height</span><span class="p">),</span> <span class="p">(</span><span class="n">half_diff</span><span class="p">,</span> <span class="n">height</span><span class="p">)])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">trapezoid</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">base1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">base2</span> <span class="o">-</span> <span class="n">half_diff</span><span class="p">,</span> <span class="n">height</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="n">half_diff</span><span class="p">,</span> <span class="n">height</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">trapezoid</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="Geometry.parallelogram">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.geometry.Geometry.parallelogram">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parallelogram</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">side_length</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Parallelogram&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a parallelogram given the base, side length, and height.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        - base: Length of the base.</span>
+<span class="sd">        - side_length: Length of the side.</span>
+<span class="sd">        - height: Height of the parallelogram.</span>
+<span class="sd">        - name: Name of the geometry.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        - A dictionary with &#39;polygon&#39; as the key for the Shapely polygon object and &#39;name&#39; as the key for the name of the geometry.</span>
+
+<span class="sd">        Example usage:</span>
+<span class="sd">        - parallelogram = Geometry.parallelogram(base=10, side_length=6, height=4, name=&#39;Parallelogram&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parallelogram</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="n">base</span> <span class="o">+</span> <span class="n">side_length</span><span class="p">,</span> <span class="n">height</span><span class="p">),</span> <span class="p">(</span><span class="n">side_length</span><span class="p">,</span> <span class="n">height</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">parallelogram</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rectangle_with_circular_hole</span><span class="p">(</span><span class="n">rect_point1</span><span class="p">,</span> <span class="n">rect_point2</span><span class="p">,</span> <span class="n">circle_center</span><span class="p">,</span> <span class="n">circle_radius</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">circle_point</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;RectangleWithCircularHole&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a rectangular region with a circular hole or cut.</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        </span>
+<span class="sd">        Creates a geometry where a circular region is subtracted from a rectangular region.</span>
+<span class="sd">        The result depends on the relative positions of the rectangle and circle:</span>
+<span class="sd">        </span>
+<span class="sd">        * If the circle is completely inside the rectangle, it creates a circular hole</span>
+<span class="sd">        * If the circle intersects the rectangle, it cuts out the intersecting portion</span>
+<span class="sd">        * If the circle is completely outside the rectangle, it returns the original rectangle</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        rect_point1 : tuple</span>
+<span class="sd">            (x, y) coordinates for the first corner of the rectangle</span>
+<span class="sd">        rect_point2 : tuple</span>
+<span class="sd">            (x, y) coordinates for the opposite corner of the rectangle</span>
+<span class="sd">        circle_center : tuple</span>
+<span class="sd">            (x, y) coordinates representing the center of the circle</span>
+<span class="sd">        circle_radius : float, optional</span>
+<span class="sd">            Radius of the circle (required if circle_point is not provided)</span>
+<span class="sd">        circle_point : tuple, optional</span>
+<span class="sd">            (x, y) coordinates of a point on the circle (required if circle_radius is not provided)</span>
+<span class="sd">        name : str, optional</span>
+<span class="sd">            Name of the geometry (default: &#39;RectangleWithCircularHole&#39;)</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary containing:</span>
+<span class="sd">            - &#39;polygon&#39;: The Shapely polygon object</span>
+<span class="sd">            - &#39;name&#39;: The name of the geometry</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; rect_with_hole = Geometry.rectangle_with_circular_hole(</span>
+<span class="sd">        ...     rect_point1=(0, 0),</span>
+<span class="sd">        ...     rect_point2=(10, 5),</span>
+<span class="sd">        ...     circle_center=(5, 2.5),</span>
+<span class="sd">        ...     circle_radius=1,</span>
+<span class="sd">        ...     name=&#39;RectWithCentralHole&#39;</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># First, create the rectangle using the existing method</span>
+        <span class="n">rectangle_geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">rectangle_corners</span><span class="p">(</span><span class="n">rect_point1</span><span class="p">,</span> <span class="n">rect_point2</span><span class="p">)</span>
+        <span class="n">rectangle</span> <span class="o">=</span> <span class="n">rectangle_geom</span><span class="p">[</span><span class="s1">&#39;polygon&#39;</span><span class="p">]</span>
+        
+        <span class="c1"># Create the circle using the existing method</span>
+        <span class="n">circle_geom</span> <span class="o">=</span> <span class="n">Geometry</span><span class="o">.</span><span class="n">circle</span><span class="p">(</span><span class="n">circle_center</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="n">circle_radius</span><span class="p">,</span> <span class="n">point</span><span class="o">=</span><span class="n">circle_point</span><span class="p">)</span>
+        <span class="n">circle</span> <span class="o">=</span> <span class="n">circle_geom</span><span class="p">[</span><span class="s1">&#39;polygon&#39;</span><span class="p">]</span>
+        
+        <span class="c1"># Check if the circle intersects with the rectangle</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">circle</span><span class="o">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">rectangle</span><span class="p">):</span>
+            <span class="c1"># If the circle is completely outside the rectangle</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Note: The circular region does not intersect with the rectangular region. Returning the original rectangle.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">rectangle</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span>
+        
+        <span class="c1"># Get the minimum and maximum coordinates of both shapes</span>
+        <span class="n">rect_minx</span><span class="p">,</span> <span class="n">rect_miny</span><span class="p">,</span> <span class="n">rect_maxx</span><span class="p">,</span> <span class="n">rect_maxy</span> <span class="o">=</span> <span class="n">rectangle</span><span class="o">.</span><span class="n">bounds</span>
+        <span class="n">circ_minx</span><span class="p">,</span> <span class="n">circ_miny</span><span class="p">,</span> <span class="n">circ_maxx</span><span class="p">,</span> <span class="n">circ_maxy</span> <span class="o">=</span> <span class="n">circle</span><span class="o">.</span><span class="n">bounds</span>
+        
+        <span class="c1"># Check if the circle is completely inside the rectangle</span>
+        <span class="n">circle_inside</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">circ_minx</span> <span class="o">&gt;=</span> <span class="n">rect_minx</span> <span class="ow">and</span>
+            <span class="n">circ_miny</span> <span class="o">&gt;=</span> <span class="n">rect_miny</span> <span class="ow">and</span>
+            <span class="n">circ_maxx</span> <span class="o">&lt;=</span> <span class="n">rect_maxx</span> <span class="ow">and</span>
+            <span class="n">circ_maxy</span> <span class="o">&lt;=</span> <span class="n">rect_maxy</span>
+        <span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">circle_inside</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Note: The circular region is completely inside the rectangular region. Creating a hole.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Note: The circular region intersects with the rectangular region. Cutting out the intersecting portion.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Subtract the circle from the rectangle</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">rectangle</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">circle</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;polygon&#39;</span><span class="p">:</span> <span class="n">result</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Md Jalal Uddin Rumi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

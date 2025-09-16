@@ -1,0 +1,439 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polygen.polygen2d.optimize &mdash; polygen 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://Rumi381.github.io/PolyGen/_modules/polygen/polygen2d/optimize.html" />
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/custom.js?v=14139ab5"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            polygen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">polygen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">polygen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">polygen.polygen2d.optimize</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for polygen.polygen2d.optimize</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">LineString</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.ops</span><span class="w"> </span><span class="kn">import</span> <span class="n">unary_union</span>
+
+<div class="viewcode-block" id="MeshOptimizer">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.optimize.MeshOptimizer">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MeshOptimizer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for optimizing mesh geometries by collapsing short edges in Voronoi cells</span>
+<span class="sd">    and polygon boundaries.</span>
+
+<span class="sd">    This class provides functionality to analyze and optimize geometric meshes by</span>
+<span class="sd">    identifying and collapsing short edges while preserving the overall structure</span>
+<span class="sd">    of the mesh.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    min_edge_length : float, optional</span>
+<span class="sd">        Minimum edge length threshold for optimization, by default None</span>
+<span class="sd">    verbose : bool, optional</span>
+<span class="sd">        Whether to print detailed information during processing, by default False</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    _min_edge_length : float</span>
+<span class="sd">        Stored minimum edge length threshold</span>
+<span class="sd">    _verbose : bool</span>
+<span class="sd">        Flag for verbose output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MeshOptimizer.__init__">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.optimize.MeshOptimizer.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_edge_length</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_min_edge_length</span> <span class="o">=</span> <span class="n">min_edge_length</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span> <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="p">{}</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_collect_polygon_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                             <span class="n">polygon</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]</span>
+                             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">LineString</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Collect edges from a polygon with their associated metadata.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        polygon : Union[Polygon, MultiPolygon]</span>
+<span class="sd">            Input polygon to collect edges from</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[Tuple[float, LineString, str, int]]</span>
+<span class="sd">            List of tuples containing (edge_length, line, boundary_type, index)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">def</span><span class="w"> </span><span class="nf">process_ring</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">ring_type</span><span class="p">,</span> <span class="n">ring_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([</span><span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]])</span>
+                <span class="n">edge_info</span> <span class="o">=</span> <span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> 
+                           <span class="p">(</span><span class="n">ring_type</span><span class="p">,</span> <span class="n">ring_index</span><span class="p">)</span> <span class="k">if</span> <span class="n">ring_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">ring_type</span><span class="p">,</span> 
+                           <span class="n">i</span><span class="p">)</span>
+                <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge_info</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">polygon</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+            <span class="n">process_ring</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">polygon</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">),</span> <span class="s1">&#39;exterior&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">interior</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">polygon</span><span class="o">.</span><span class="n">interiors</span><span class="p">):</span>
+                <span class="n">process_ring</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">interior</span><span class="o">.</span><span class="n">coords</span><span class="p">),</span> <span class="s1">&#39;interior&#39;</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># MultiPolygon</span>
+            <span class="k">for</span> <span class="n">poly_idx</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">polygon</span><span class="o">.</span><span class="n">geoms</span><span class="p">):</span>
+                <span class="n">process_ring</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">),</span> <span class="s1">&#39;exterior&#39;</span><span class="p">,</span> <span class="n">poly_idx</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">int_idx</span><span class="p">,</span> <span class="n">interior</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">interiors</span><span class="p">):</span>
+                    <span class="n">process_ring</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">interior</span><span class="o">.</span><span class="n">coords</span><span class="p">),</span> <span class="s1">&#39;interior&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">poly_idx</span><span class="p">,</span> <span class="n">int_idx</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">edges</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_find_root</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vertex</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the root vertex in the union-find data structure with path compression.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        vertex : Tuple[float, float]</span>
+<span class="sd">            Input vertex coordinates</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Tuple[float, float]</span>
+<span class="sd">            Root vertex coordinates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">vertex</span>
+        <span class="k">while</span> <span class="n">root</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="p">:</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="p">[</span><span class="n">root</span><span class="p">]</span>
+        
+        <span class="c1"># Path compression</span>
+        <span class="k">while</span> <span class="n">vertex</span> <span class="o">!=</span> <span class="n">root</span><span class="p">:</span>
+            <span class="n">parent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="p">[</span><span class="n">vertex</span><span class="p">]</span> <span class="o">=</span> <span class="n">root</span>
+            <span class="n">vertex</span> <span class="o">=</span> <span class="n">parent</span>
+            
+        <span class="k">return</span> <span class="n">root</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_vertex_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                             <span class="n">edges_to_collapse</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="n">LineString</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span>
+                             <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create vertex mapping for edge collapse operations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        edges_to_collapse : List[Tuple[float, LineString, str, int]]</span>
+<span class="sd">            List of edges to be collapsed</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">merge_list</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="c1"># Create initial merge list</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">edges_to_collapse</span><span class="p">:</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">end</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">line</span><span class="o">.</span><span class="n">coords</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">merge_list</span><span class="p">[</span><span class="n">end</span><span class="p">]</span> <span class="o">=</span> <span class="n">start</span>
+
+        <span class="c1"># Create unified vertex mapping</span>
+        <span class="k">for</span> <span class="n">old_point</span><span class="p">,</span> <span class="n">new_point</span> <span class="ow">in</span> <span class="n">merge_list</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">root_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_root</span><span class="p">(</span><span class="n">old_point</span><span class="p">)</span>
+            <span class="n">root_new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_root</span><span class="p">(</span><span class="n">new_point</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">root_old</span> <span class="o">!=</span> <span class="n">root_new</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_point_map</span><span class="p">[</span><span class="n">root_old</span><span class="p">]</span> <span class="o">=</span> <span class="n">root_new</span>
+
+<div class="viewcode-block" id="MeshOptimizer.analyze_voronoi_edges">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.optimize.MeshOptimizer.analyze_voronoi_edges">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_voronoi_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                            <span class="n">voronoi_cells</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]],</span> 
+                            <span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                            <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Analyze and print information about short edges in Voronoi cells.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        voronoi_cells : List[Union[Polygon, MultiPolygon]]</span>
+<span class="sd">            List of Voronoi cells to analyze</span>
+<span class="sd">        n : int, optional</span>
+<span class="sd">            Number of shortest edges to analyze, by default None</span>
+<span class="sd">        threshold : float, optional</span>
+<span class="sd">            Length threshold for edge analysis, by default None</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If neither or both n and threshold are specified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Specify exactly one of &#39;n&#39; or &#39;threshold&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">voronoi_cells</span><span class="p">:</span>
+            <span class="n">edges</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_collect_polygon_edges</span><span class="p">(</span><span class="n">cell</span><span class="p">))</span>
+        
+        <span class="n">edges</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">edges_to_print</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edges</span> <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_to_print</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No edges found </span><span class="si">{</span><span class="s2">&quot;shorter than &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">str</span><span class="p">(</span><span class="n">threshold</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">threshold</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;First &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;All&quot;</span><span class="si">}</span><span class="s1"> edge lengths in Voronoi cells:&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edges_to_print</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edge </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">length</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MeshOptimizer.optimize_voronoi_cells">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.optimize.MeshOptimizer.optimize_voronoi_cells">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">optimize_voronoi_cells</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                             <span class="n">voronoi_cells</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]],</span> 
+                             <span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                             <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Optimize Voronoi cells by collapsing short edges.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        voronoi_cells : List[Union[Polygon, MultiPolygon]]</span>
+<span class="sd">            List of Voronoi cells to optimize</span>
+<span class="sd">        n : int, optional</span>
+<span class="sd">            Number of shortest edges to collapse, by default None</span>
+<span class="sd">        threshold : float, optional</span>
+<span class="sd">            Length threshold for edge collapse, by default None</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List[Union[Polygon, MultiPolygon]]</span>
+<span class="sd">            Optimized Voronoi cells</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If neither or both n and threshold are specified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Specify exactly one of &#39;n&#39; or &#39;threshold&#39;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Collect and sort edges</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">voronoi_cells</span><span class="p">:</span>
+            <span class="n">edges</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_collect_polygon_edges</span><span class="p">(</span><span class="n">cell</span><span class="p">))</span>
+        <span class="n">edges</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Select edges to collapse</span>
+        <span class="n">edges_to_collapse</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edges</span> <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_to_collapse</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No edges to collapse, returning original cells&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">voronoi_cells</span>
+
+        <span class="c1"># Create vertex mapping and optimize cells</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_vertex_mapping</span><span class="p">(</span><span class="n">edges_to_collapse</span><span class="p">)</span>
+        
+        <span class="n">modified_cells</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">voronoi_cells</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+                <span class="n">new_coords</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_find_root</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">modified_cells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Polygon</span><span class="p">(</span><span class="n">new_coords</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># MultiPolygon</span>
+                <span class="n">new_polys</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">poly</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">geoms</span><span class="p">:</span>
+                    <span class="n">new_coords</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_find_root</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                    <span class="n">new_polys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Polygon</span><span class="p">(</span><span class="n">new_coords</span><span class="p">))</span>
+                <span class="n">modified_cells</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">MultiPolygon</span><span class="p">(</span><span class="n">new_polys</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">modified_cells</span></div>
+
+
+<div class="viewcode-block" id="MeshOptimizer.analyze_boundary_edges">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.optimize.MeshOptimizer.analyze_boundary_edges">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">analyze_boundary_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                             <span class="n">polygon</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">],</span> 
+                             <span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                             <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Analyze and print information about short edges in polygon boundaries.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        polygon : Union[Polygon, MultiPolygon]</span>
+<span class="sd">            Polygon to analyze</span>
+<span class="sd">        n : int, optional</span>
+<span class="sd">            Number of shortest edges to analyze, by default None</span>
+<span class="sd">        threshold : float, optional</span>
+<span class="sd">            Length threshold for edge analysis, by default None</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If neither or both n and threshold are specified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Specify exactly one of &#39;n&#39; or &#39;threshold&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collect_polygon_edges</span><span class="p">(</span><span class="n">polygon</span><span class="p">)</span>
+        <span class="n">edges</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        
+        <span class="n">edges_to_print</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edges</span> <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_to_print</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No edges found </span><span class="si">{</span><span class="s2">&quot;shorter than &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">str</span><span class="p">(</span><span class="n">threshold</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">threshold</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;&quot;</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="s2">&quot;First &quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s2">&quot;All&quot;</span><span class="si">}</span><span class="s1"> edge lengths in boundary:&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edges_to_print</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Edge </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">length</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MeshOptimizer.optimize_boundary">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.optimize.MeshOptimizer.optimize_boundary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">optimize_boundary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                        <span class="n">polygon</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">],</span> 
+                        <span class="n">n</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
+                        <span class="n">threshold</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+                        <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Optimize polygon boundaries by collapsing short edges.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        polygon : Union[Polygon, MultiPolygon]</span>
+<span class="sd">            Polygon to optimize</span>
+<span class="sd">        n : int, optional</span>
+<span class="sd">            Number of shortest edges to collapse, by default None</span>
+<span class="sd">        threshold : float, optional</span>
+<span class="sd">            Length threshold for edge collapse, by default None</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Union[Polygon, MultiPolygon]</span>
+<span class="sd">            Optimized polygon</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If neither or both n and threshold are specified</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Specify exactly one of &#39;n&#39; or &#39;threshold&#39;&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Collect and sort edges</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collect_polygon_edges</span><span class="p">(</span><span class="n">polygon</span><span class="p">)</span>
+        <span class="n">edges</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Select edges to collapse</span>
+        <span class="n">edges_to_collapse</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:</span><span class="n">n</span><span class="p">]</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">edges</span> <span class="k">if</span> <span class="n">e</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_to_collapse</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;No edges to collapse, returning original polygon&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">polygon</span>
+
+        <span class="c1"># Create vertex mapping</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_vertex_mapping</span><span class="p">(</span><span class="n">edges_to_collapse</span><span class="p">)</span>
+
+        <span class="c1"># Update polygon vertices</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">update_polygon</span><span class="p">(</span><span class="n">poly</span><span class="p">:</span> <span class="n">Polygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Polygon</span><span class="p">:</span>
+            <span class="n">new_exterior</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_find_root</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+            <span class="n">new_interiors</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">interior</span> <span class="ow">in</span> <span class="n">poly</span><span class="o">.</span><span class="n">interiors</span><span class="p">:</span>
+                <span class="n">new_interior</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_find_root</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span> <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">interior</span><span class="o">.</span><span class="n">coords</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">new_interiors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_interior</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">new_exterior</span><span class="p">,</span> <span class="n">new_interiors</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">polygon</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">update_polygon</span><span class="p">(</span><span class="n">polygon</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># MultiPolygon</span>
+            <span class="n">modified_polys</span> <span class="o">=</span> <span class="p">[</span><span class="n">update_polygon</span><span class="p">(</span><span class="n">poly</span><span class="p">)</span> <span class="k">for</span> <span class="n">poly</span> <span class="ow">in</span> <span class="n">polygon</span><span class="o">.</span><span class="n">geoms</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">unary_union</span><span class="p">(</span><span class="n">modified_polys</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Md Jalal Uddin Rumi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

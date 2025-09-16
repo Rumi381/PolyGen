@@ -1,0 +1,567 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polygen.polygen2d.constrainedPointGen &mdash; polygen 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://Rumi381.github.io/PolyGen/_modules/polygen/polygen2d/constrainedPointGen.html" />
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/custom.js?v=14139ab5"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            polygen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">polygen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">polygen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">polygen.polygen2d.constrainedPointGen</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for polygen.polygen2d.constrainedPointGen</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">Point</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats.qmc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sobol</span><span class="p">,</span> <span class="n">Halton</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<div class="viewcode-block" id="ConstrainedPointGenerator">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.constrainedPointGen.ConstrainedPointGenerator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ConstrainedPointGenerator</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class to generate constrained point distributions inside a polygonal region using various methods,</span>
+<span class="sd">    including Poisson Disc Sampling and quasi-random sequences (Sobol and Halton).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    polygon : Polygon or MultiPolygon</span>
+<span class="sd">        A Shapely polygon or multipolygon that defines the region within which the points are generated.</span>
+<span class="sd">    N : int</span>
+<span class="sd">        The target number of points to generate.</span>
+<span class="sd">    seed : int or None, optional</span>
+<span class="sd">        Seed for the random number generator. Default is None.</span>
+<span class="sd">    k : int, optional</span>
+<span class="sd">        Number of attempts to place a new point during Poisson Disc Sampling. Default is 30.</span>
+<span class="sd">    margin : float, optional</span>
+<span class="sd">        A small margin to shrink the polygon before generating points. This helps to avoid boundary points.</span>
+<span class="sd">        Default is 0.01.</span>
+<span class="sd">    tolerance : float, optional</span>
+<span class="sd">        Tolerance for the number of generated points. Default is 0.01.</span>
+<span class="sd">    max_iterations : int, optional</span>
+<span class="sd">        Maximum number of iterations for radius adjustment during Poisson Disc Sampling. Default is 50.</span>
+<span class="sd">    workers : int or None, optional</span>
+<span class="sd">        Number of workers to use for parallel processing. If None, the number of workers is set based on</span>
+<span class="sd">        the number of points (1 for N &lt; 1000, or the number of CPU cores for N &gt;= 1000). Default is None.</span>
+<span class="sd">    optimization : str or None, optional</span>
+<span class="sd">        Optimization scheme for quasi-random sequences (Sobol or Halton). Default is None.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    polygon : Polygon or MultiPolygon</span>
+<span class="sd">        The polygonal region within which points are generated.</span>
+<span class="sd">    N : int</span>
+<span class="sd">        The target number of points.</span>
+<span class="sd">    rng : numpy.random.Generator</span>
+<span class="sd">        Random number generator used for point generation.</span>
+<span class="sd">    margin : float</span>
+<span class="sd">        The margin used to shrink the polygon before point generation.</span>
+<span class="sd">    tolerance : float</span>
+<span class="sd">        The tolerance level for the number of points generated.</span>
+<span class="sd">    max_iterations : int</span>
+<span class="sd">        The maximum number of iterations for adjusting the radius during Poisson Disc Sampling.</span>
+<span class="sd">    workers : int</span>
+<span class="sd">        Number of workers for parallel processing.</span>
+<span class="sd">    optimization : str or None</span>
+<span class="sd">        Optimization scheme for quasi-random sequences (if any).</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    generate_poisson_points()</span>
+<span class="sd">        Generate N points using Poisson Disc Sampling inside the polygon.</span>
+<span class="sd">    generate_sequence_points(use_sobol=False)</span>
+<span class="sd">        Generate N points using a quasi-random sequence (Sobol or Halton) inside the polygon.</span>
+<span class="sd">    _generate_points(radius, shrunk_polygon)</span>
+<span class="sd">        Generate points using Poisson Disc Sampling for a given radius within a shrunk polygon.</span>
+<span class="sd">    _get_nearby_points(occupied_cells, grid, points, row, col, radius, cell_size)</span>
+<span class="sd">        Helper method to return nearby points within a given grid for Poisson Disc Sampling.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Poisson Disc Sampling generates points such that no two points are closer than a specified radius, making it</span>
+<span class="sd">    useful for applications like blue-noise sampling or spatial point distributions with minimum separation.</span>
+
+<span class="sd">    Quasi-random sequences (Sobol and Halton) generate points that cover the space more uniformly than pure random</span>
+<span class="sd">    sampling, making them suitable for integration and optimization problems.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    Poisson Disc Sampling:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; from shapely.geometry import Polygon</span>
+<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
+<span class="sd">    &gt;&gt;&gt; polygon = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])</span>
+<span class="sd">    &gt;&gt;&gt; N = 100</span>
+<span class="sd">    &gt;&gt;&gt; generator = ConstrainedPointGenerator(polygon, N)</span>
+<span class="sd">    &gt;&gt;&gt; points = generator.generate_poisson_points()</span>
+<span class="sd">    &gt;&gt;&gt; print(points.shape)</span>
+<span class="sd">    (100, 2)</span>
+<span class="sd">    </span>
+<span class="sd">    Generating points using Halton sequence:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; points_halton = generator.generate_sequence_points(use_sobol=False)</span>
+<span class="sd">    &gt;&gt;&gt; print(points_halton.shape)</span>
+<span class="sd">    (100, 2)</span>
+<span class="sd">    </span>
+<span class="sd">    Generating points using Sobol sequence:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; points_sobol = generator.generate_sequence_points(use_sobol=True)</span>
+<span class="sd">    &gt;&gt;&gt; print(points_sobol.shape)</span>
+<span class="sd">    (128, 2)  # Sobol generates points in powers of two</span>
+
+<span class="sd">    Performance Tips</span>
+<span class="sd">    ----------------</span>
+<span class="sd">    - For large numbers of points (N &gt;= 1000), use multiple workers for parallel processing. By default, the number</span>
+<span class="sd">      of workers is automatically set based on your CPU cores when N &gt;= 1000.</span>
+<span class="sd">    - The Sobol sequence is optimized for uniform space filling but can be slower when generating small numbers</span>
+<span class="sd">      of points compared to Halton.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ConstrainedPointGenerator.__init__">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.constrainedPointGen.ConstrainedPointGenerator.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">polygon</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">optimization</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">polygon</span> <span class="o">=</span> <span class="n">polygon</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">=</span> <span class="n">N</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">margin</span> <span class="o">=</span> <span class="n">margin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">=</span> <span class="n">tolerance</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="n">max_iterations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workers</span> <span class="o">=</span> <span class="n">workers</span> <span class="k">if</span> <span class="n">workers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="k">if</span> <span class="n">N</span> <span class="o">&gt;=</span> <span class="mi">1000</span> <span class="k">else</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">optimization</span> <span class="o">=</span> <span class="n">optimization</span></div>
+
+
+<div class="viewcode-block" id="ConstrainedPointGenerator._generate_points">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.constrainedPointGen.ConstrainedPointGenerator._generate_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_generate_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">shrunk_polygon</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate points using Poisson Disc Sampling with specified radius.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        radius : float</span>
+<span class="sd">            Minimum distance between points</span>
+<span class="sd">        shrunk_polygon : Polygon</span>
+<span class="sd">            Polygon shrunk by margin to avoid boundary points</span>
+<span class="sd">            </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Array of generated points, shape (M, 2)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">minx</span><span class="p">,</span> <span class="n">miny</span><span class="p">,</span> <span class="n">maxx</span><span class="p">,</span> <span class="n">maxy</span> <span class="o">=</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">bounds</span>
+        <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">maxx</span> <span class="o">-</span> <span class="n">minx</span><span class="p">,</span> <span class="n">maxy</span> <span class="o">-</span> <span class="n">miny</span>
+        <span class="n">cell_size</span> <span class="o">=</span> <span class="n">radius</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">cols</span><span class="p">,</span> <span class="n">rows</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">width</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">)),</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">height</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">))</span>
+        
+        <span class="c1"># Initialize grid with empty cells (-1 indicates no point)</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">rows</span><span class="p">,</span> <span class="n">cols</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">active</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="c1"># List to track occupied grid cells</span>
+        <span class="n">occupied_cells</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="c1"># Generate the first point</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">minx</span><span class="p">,</span> <span class="n">maxx</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">miny</span><span class="p">,</span> <span class="n">maxy</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)):</span>
+                <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+                <span class="n">active</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">col</span><span class="p">,</span> <span class="n">row</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">minx</span><span class="p">)</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">),</span> <span class="nb">int</span><span class="p">((</span><span class="n">y</span> <span class="o">-</span> <span class="n">miny</span><span class="p">)</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">)</span>
+                <span class="n">grid</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">occupied_cells</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">))</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Generate more points</span>
+        <span class="k">while</span> <span class="n">active</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">active</span><span class="p">)</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+            
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">):</span>
+                <span class="n">angle</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">radius</span><span class="p">)</span>
+                <span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angle</span><span class="p">),</span> <span class="n">points</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">r</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angle</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">minx</span> <span class="o">&lt;=</span> <span class="n">new_x</span> <span class="o">&lt;</span> <span class="n">maxx</span> <span class="ow">and</span> <span class="n">miny</span> <span class="o">&lt;=</span> <span class="n">new_y</span> <span class="o">&lt;</span> <span class="n">maxy</span><span class="p">:</span>
+                    <span class="n">col</span><span class="p">,</span> <span class="n">row</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">new_x</span> <span class="o">-</span> <span class="n">minx</span><span class="p">)</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">),</span> <span class="nb">int</span><span class="p">((</span><span class="n">new_y</span> <span class="o">-</span> <span class="n">miny</span><span class="p">)</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">)</span>
+                    
+                    <span class="k">if</span> <span class="n">grid</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">new_point</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">new_point</span><span class="p">):</span>
+                            <span class="c1"># Optimize neighborhood search by limiting it to occupied cells</span>
+                            <span class="n">nearby_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_nearby_points</span><span class="p">(</span><span class="n">occupied_cells</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="nb">all</span><span class="p">((</span><span class="n">new_x</span> <span class="o">-</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">new_y</span> <span class="o">-</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">&gt;=</span> <span class="n">radius</span><span class="o">**</span><span class="mi">2</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">nearby_points</span><span class="p">):</span>
+                                <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span><span class="p">))</span>
+                                <span class="n">grid</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+                                <span class="n">active</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                                <span class="n">occupied_cells</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">))</span>  <span class="c1"># Mark the cell as occupied</span>
+                                <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                                <span class="k">break</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">found</span><span class="p">:</span>
+                <span class="n">active</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">points</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ConstrainedPointGenerator._get_nearby_points">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.constrainedPointGen.ConstrainedPointGenerator._get_nearby_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_nearby_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">occupied_cells</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="n">cell_size</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given the current grid cell (row, col), return the indices of nearby points that</span>
+<span class="sd">        might be within the search radius.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        occupied_cells : set</span>
+<span class="sd">            A set of occupied cells within the grid.</span>
+<span class="sd">        grid : numpy.ndarray</span>
+<span class="sd">            The grid used to track point placements.</span>
+<span class="sd">        points : numpy.ndarray</span>
+<span class="sd">            The list of generated points.</span>
+<span class="sd">        row : int</span>
+<span class="sd">            Row index of the current cell.</span>
+<span class="sd">        col : int</span>
+<span class="sd">            Column index of the current cell.</span>
+<span class="sd">        radius : float</span>
+<span class="sd">            The search radius around the current cell.</span>
+<span class="sd">        cell_size : float</span>
+<span class="sd">            The size of each cell in the grid.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        nearby_points : list of int</span>
+<span class="sd">            List of indices of points near the current cell.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">search_radius</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">radius</span> <span class="o">/</span> <span class="n">cell_size</span><span class="p">))</span>  <span class="c1"># Number of cells to search around the current cell</span>
+        <span class="n">nearby_points</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Only search occupied cells within the search radius</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">row</span> <span class="o">-</span> <span class="n">search_radius</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span> <span class="o">+</span> <span class="n">search_radius</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">col</span> <span class="o">-</span> <span class="n">search_radius</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">col</span> <span class="o">+</span> <span class="n">search_radius</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="ow">in</span> <span class="n">occupied_cells</span><span class="p">:</span>
+                    <span class="n">point_idx</span> <span class="o">=</span> <span class="n">grid</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">point_idx</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">nearby_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point_idx</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">nearby_points</span></div>
+
+
+<div class="viewcode-block" id="ConstrainedPointGenerator.generate_poisson_points">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.constrainedPointGen.ConstrainedPointGenerator.generate_poisson_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_poisson_points</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        Generate N points using Poisson Disc Sampling inside the polygon.</span>
+
+<span class="sd">        This method applies binary search over the radius to ensure that the number</span>
+<span class="sd">        of generated points is as close to N as possible within the given tolerance.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        points : numpy.ndarray, shape (N, 2)</span>
+<span class="sd">            Array of generated points inside the polygon.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the input polygon is invalid or the margin is too large.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; from shapely.geometry import Polygon</span>
+<span class="sd">        &gt;&gt;&gt; polygon = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])</span>
+<span class="sd">        &gt;&gt;&gt; generator = ConstrainedPointGenerator(polygon, 100)</span>
+<span class="sd">        &gt;&gt;&gt; points = generator.generate_poisson_points()</span>
+<span class="sd">        &gt;&gt;&gt; print(points.shape)</span>
+<span class="sd">        (100, 2)</span>
+
+<span class="sd">        Performance Tip</span>
+<span class="sd">        ---------------</span>
+<span class="sd">        If the number of generated points is far from N, try increasing the number of iterations or reducing</span>
+<span class="sd">        the margin to improve accuracy.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">polygon</span><span class="p">,</span> <span class="p">(</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The input must be a Shapely Polygon or MultiPolygon.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;N must be a positive integer.&quot;</span><span class="p">)</span>
+        
+        <span class="n">shrunk_polygon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">polygon</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">margin</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">is_empty</span> <span class="ow">or</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">area</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The margin is too large, the polygon has disappeared or is too small after buffering.&quot;</span><span class="p">)</span>
+        
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">initial_radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">area</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="n">radius_low</span><span class="p">,</span> <span class="n">radius_high</span> <span class="o">=</span> <span class="n">initial_radius</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">initial_radius</span> <span class="o">*</span> <span class="mi">2</span>
+        <span class="n">best_points</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">best_count</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
+            <span class="n">radius</span> <span class="o">=</span> <span class="p">(</span><span class="n">radius_low</span> <span class="o">+</span> <span class="n">radius_high</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_points</span><span class="p">(</span><span class="n">radius</span><span class="p">,</span> <span class="n">shrunk_polygon</span><span class="p">)</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">count</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">:</span>
+                <span class="k">break</span>
+            
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">count</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">abs</span><span class="p">(</span><span class="n">best_count</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">):</span>
+                <span class="n">best_points</span> <span class="o">=</span> <span class="n">points</span>
+                <span class="n">best_count</span> <span class="o">=</span> <span class="n">count</span>
+            
+            <span class="k">if</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">:</span>
+                <span class="n">radius_high</span> <span class="o">=</span> <span class="n">radius</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">radius_low</span> <span class="o">=</span> <span class="n">radius</span>
+        
+        <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Poisson Disc Sampling completed in </span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated </span><span class="si">{</span><span class="n">count</span><span class="si">}</span><span class="s2"> points (target: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">points</span> <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">count</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="k">else</span> <span class="n">best_points</span></div>
+
+
+<div class="viewcode-block" id="ConstrainedPointGenerator.generate_sequence_points">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.constrainedPointGen.ConstrainedPointGenerator.generate_sequence_points">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_sequence_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_sobol</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        :no-index:</span>
+<span class="sd">        Generate N points using a quasi-random sequence (Sobol or Halton) inside the polygon.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        use_sobol : bool, optional</span>
+<span class="sd">            If True, use the Sobol sequence for point generation. Otherwise, use the Halton sequence.</span>
+<span class="sd">            Default is False (use Halton).</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        points : numpy.ndarray, shape (N, 2)</span>
+<span class="sd">            Array of generated points inside the polygon.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the input polygon is invalid or the margin is too large.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        Generating points using Sobol sequence:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; generator = ConstrainedPointGenerator(polygon, 128)</span>
+<span class="sd">        &gt;&gt;&gt; points_sobol = generator.generate_sequence_points(use_sobol=True)</span>
+<span class="sd">        &gt;&gt;&gt; print(points_sobol.shape)</span>
+<span class="sd">        (128, 2)</span>
+
+<span class="sd">        Generating points using Halton sequence:</span>
+<span class="sd">        </span>
+<span class="sd">        &gt;&gt;&gt; points_halton = generator.generate_sequence_points(use_sobol=False)</span>
+<span class="sd">        &gt;&gt;&gt; print(points_halton.shape)</span>
+<span class="sd">        (100, 2)</span>
+
+<span class="sd">        Performance Tip</span>
+<span class="sd">        ---------------</span>
+<span class="sd">        If using the Sobol sequence, note that it generates points in powers of two. Ensure that N is a power</span>
+<span class="sd">        of two or slightly adjust the target number of points for better performance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">polygon</span><span class="p">,</span> <span class="p">(</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The input must be a Shapely Polygon or MultiPolygon.&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;N must be a positive integer.&quot;</span><span class="p">)</span>
+        
+        <span class="n">shrunk_polygon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">polygon</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">margin</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">is_empty</span> <span class="ow">or</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">area</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The margin is too large, the polygon has disappeared or is too small after buffering.&quot;</span><span class="p">)</span>
+        
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">use_sobol</span><span class="p">:</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">N</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">bit_length</span><span class="p">()</span>  <span class="c1"># Next power of 2</span>
+            <span class="n">sampler</span> <span class="o">=</span> <span class="n">Sobol</span><span class="p">(</span><span class="n">d</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span> <span class="n">optimization</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimization</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">N</span>
+            <span class="n">sampler</span> <span class="o">=</span> <span class="n">Halton</span><span class="p">(</span><span class="n">d</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">seed</span><span class="p">,</span> <span class="n">optimization</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">optimization</span><span class="p">)</span>
+        
+        <span class="n">min_x</span><span class="p">,</span> <span class="n">min_y</span><span class="p">,</span> <span class="n">max_x</span><span class="p">,</span> <span class="n">max_y</span> <span class="o">=</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">bounds</span>
+        <span class="n">generated_points</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">generated_points</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">N</span><span class="p">:</span>
+            <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1.2</span> <span class="o">*</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">generated_points</span><span class="p">)))</span>
+            <span class="n">sample</span> <span class="o">=</span> <span class="n">sampler</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workers</span><span class="p">)</span>
+            
+            <span class="n">sample</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">sample</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_x</span> <span class="o">-</span> <span class="n">min_x</span><span class="p">)</span> <span class="o">+</span> <span class="n">min_x</span>
+            <span class="n">sample</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">sample</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">max_y</span> <span class="o">-</span> <span class="n">min_y</span><span class="p">)</span> <span class="o">+</span> <span class="n">min_y</span>
+            
+            <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">sample</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">shrunk_polygon</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">point</span><span class="p">)):</span>
+                    <span class="n">generated_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">generated_points</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">N</span><span class="p">:</span>
+                    <span class="k">break</span>
+        
+        <span class="n">result</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">generated_points</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="p">])</span>
+        
+        <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Point generation using quasi-random generator completed in </span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2"> seconds.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated </span><span class="si">{</span><span class="n">result</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> points (target: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">N</span><span class="si">}</span><span class="s2">).&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">result</span></div>
+</div>
+
+
+<span class="c1"># Helper functions to create and use the ConstrainedPointGenerator</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_poisson_points</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper function for ConstrainedPointGenerator.generate_poisson_points().</span>
+<span class="sd">    :no-index:</span>
+<span class="sd">    </span>
+<span class="sd">    For detailed documentation, see :meth:`ConstrainedPointGenerator.generate_poisson_points`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    domain : Polygon or MultiPolygon</span>
+<span class="sd">        A Shapely polygon or multipolygon that defines the boundary.</span>
+<span class="sd">    N : int</span>
+<span class="sd">        The target number of points to generate.</span>
+<span class="sd">    seed : int or None, optional</span>
+<span class="sd">        Random number generator seed.</span>
+<span class="sd">    k : int, optional</span>
+<span class="sd">        Number of point placement attempts.</span>
+<span class="sd">    margin : float, optional</span>
+<span class="sd">        Boundary margin.</span>
+<span class="sd">    tolerance : float, optional</span>
+<span class="sd">        Point count tolerance.</span>
+<span class="sd">    max_iterations : int, optional</span>
+<span class="sd">        Maximum radius adjustment iterations.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Array of generated points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">generator</span> <span class="o">=</span> <span class="n">ConstrainedPointGenerator</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">margin</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">,</span> <span class="n">max_iterations</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate_poisson_points</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_sequence_points</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">use_sobol</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">optimization</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wrapper function for ConstrainedPointGenerator.generate_sequence_points().</span>
+<span class="sd">    :no-index:</span>
+<span class="sd">    </span>
+<span class="sd">    For detailed documentation, see :meth:`ConstrainedPointGenerator.generate_sequence_points`.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    domain : Polygon or MultiPolygon</span>
+<span class="sd">        A Shapely polygon or multipolygon that defines the boundary.</span>
+<span class="sd">    N : int</span>
+<span class="sd">        The target number of points to generate.</span>
+<span class="sd">    seed : int or None, optional</span>
+<span class="sd">        Random number generator seed.</span>
+<span class="sd">    margin : float, optional</span>
+<span class="sd">        Boundary margin.</span>
+<span class="sd">    use_sobol : bool, optional</span>
+<span class="sd">        Whether to use Sobol sequence.</span>
+<span class="sd">    workers : int or None, optional</span>
+<span class="sd">        Number of parallel workers.</span>
+<span class="sd">    optimization : str or None, optional</span>
+<span class="sd">        Sequence optimization scheme.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    numpy.ndarray</span>
+<span class="sd">        Array of generated points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">generator</span> <span class="o">=</span> <span class="n">ConstrainedPointGenerator</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">seed</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="n">margin</span><span class="p">,</span> <span class="n">workers</span><span class="o">=</span><span class="n">workers</span><span class="p">,</span> <span class="n">optimization</span><span class="o">=</span><span class="n">optimization</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">generator</span><span class="o">.</span><span class="n">generate_sequence_points</span><span class="p">(</span><span class="n">use_sobol</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Md Jalal Uddin Rumi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

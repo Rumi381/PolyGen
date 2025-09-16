@@ -1,0 +1,683 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polygen.polygen2d.utils &mdash; polygen 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://Rumi381.github.io/PolyGen/_modules/polygen/polygen2d/utils.html" />
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/custom.js?v=14139ab5"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            polygen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">polygen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">polygen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">polygen.polygen2d.utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for polygen.polygen2d.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">LineString</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Geometry</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.IO</span><span class="w"> </span><span class="kn">import</span> <span class="n">IO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.constrainedPointGen</span><span class="w"> </span><span class="kn">import</span> <span class="n">generate_poisson_points</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.errorBasedLloyd</span><span class="w"> </span><span class="kn">import</span> <span class="n">lloyd_with_density</span> <span class="k">as</span> <span class="n">lloyd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.voroGen</span><span class="w"> </span><span class="kn">import</span> <span class="n">VoronoiGenerator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">MeshOptimizer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.finiteThicknessCohesiveZone</span><span class="w"> </span><span class="kn">import</span> <span class="n">CohesiveZoneAdjuster</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.triangularMeshing</span><span class="w"> </span><span class="kn">import</span> <span class="n">triangulate_geometry</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_boundary_with_points</span><span class="p">,</span> <span class="n">plot_voronoi_cells</span><span class="p">,</span> <span class="n">plot_voronoi_cells_with_short_edges</span><span class="p">,</span> <span class="n">plot_triangulated_geometry</span>
+
+<span class="c1"># Function to read the input file</span>
+<div class="viewcode-block" id="parse_input_file">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.parse_input_file">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_input_file</span><span class="p">(</span><span class="n">input_file_path</span><span class="p">):</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;boundary&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;N_points&quot;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+        <span class="s2">&quot;points_seed&quot;</span><span class="p">:</span> <span class="mi">42</span><span class="p">,</span>
+        <span class="s2">&quot;margin&quot;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="s2">&quot;N_iter&quot;</span><span class="p">:</span> <span class="mi">100000</span><span class="p">,</span>
+        <span class="s2">&quot;use_decay&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">&quot;edgeLength_threshold&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;cohesiveThickness&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;triangularMesh_minLength&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;visualize&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="s2">&quot;saveData&quot;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">}</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="c1"># Skip empty lines or lines that don&#39;t contain an &#39;=&#39; or are commented out</span>
+            <span class="k">if</span> <span class="s1">&#39;=&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">line</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;&quot;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span>  <span class="c1"># Remove any surrounding quotes</span>
+
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;true&#39;</span><span class="p">:</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;false&#39;</span><span class="p">:</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">elif</span> <span class="n">value</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="c1"># Check if boundary is a method of Geometry</span>
+    <span class="n">boundary_value</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;boundary&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">boundary_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Evaluate the boundary value if it&#39;s a Geometry method</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;boundary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">boundary_value</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;Geometry&quot;</span><span class="p">:</span> <span class="n">Geometry</span><span class="p">,</span> <span class="s2">&quot;Point&quot;</span><span class="p">:</span> <span class="n">Point</span><span class="p">})</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">NameError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">):</span>
+            <span class="c1"># If it&#39;s not a Geometry method, treat it as a file path</span>
+            <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;boundary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">boundary_value</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">parameters</span></div>
+
+
+<span class="c1"># Function to generate variables&#39; name dynamically based on the .obj file name</span>
+<div class="viewcode-block" id="generate_variable_names">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.generate_variable_names">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_variable_names</span><span class="p">(</span><span class="n">input_obj</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate variable names dynamically based on the given geometry object or .obj file.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters:</span>
+<span class="sd">    - input_obj: Path to the .obj file or a predefined geometric object from the Geometry class.</span>
+<span class="sd">    </span>
+<span class="sd">    Returns:</span>
+<span class="sd">    - A dictionary with dynamically generated variable names based on the input object&#39;s name or file name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_obj</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">input_obj</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.obj&#39;</span><span class="p">):</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">input_obj</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_obj</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;name&#39;</span> <span class="ow">in</span> <span class="n">input_obj</span><span class="p">:</span>
+        <span class="n">base_name</span> <span class="o">=</span> <span class="n">input_obj</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Input must be a path to a .obj file or a predefined geometric object with a &#39;name&#39; attribute.&quot;</span><span class="p">)</span>
+
+    <span class="n">variable_names</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;base_name&quot;</span><span class="p">:</span> <span class="n">base_name</span><span class="p">,</span>
+        <span class="s2">&quot;polygon_region&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;polygon_region_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;seed_points&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;seed_points_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;relaxed_points&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;relaxed_points_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;voronoi_cells&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;voronoi_cells_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;collapsed_voronoi_cells_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;adjusted_voronoi_cells&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;adjusted_voronoi_cells_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;collapsed_polygonRegion&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;collapsed_polygonRegion_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;triangular_mesh&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;triangular_mesh_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;figure_boundary_with_lloyds_seed_points&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_boundary_with_Lloyds_seed_points.png&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;figure_voronoi_with_short_edges&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_Voronoi_with_short_edges.png&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;figure_original_voronoi_cells&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_original_Voronoi_cells.png&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;figure_collapsed_voronoi_cells&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_collapsed_Voronoi_cells.png&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;figure_adjusted_voronoi_cells&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_adjusted_Voronoi_cells.png&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;figure_triangulated_geometry&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_triangulated_geometry.png&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;polygon_data_file&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;polygon_dataFile_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">.py&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;polygon_data&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;polygon_boundariesData_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;voronoi_data_file&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Voronoi_dataFile_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">.py&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;voronoi_data&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Voronoi_data_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">variable_names</span></div>
+
+
+<span class="c1"># Function to create the 2D Voronoi mesh from the given parameters</span>
+<div class="viewcode-block" id="computeVoronoi2d">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.computeVoronoi2d">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">computeVoronoi2d</span><span class="p">(</span><span class="n">boundary</span><span class="p">,</span> <span class="n">N_points</span><span class="p">,</span> <span class="n">points_seed</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">N_iter</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">use_decay</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">edgeLength_threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cohesiveThickness</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">triangularMesh_minLength</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="n">visualize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">saveData</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute and visualize Voronoi diagrams within an arbitrarily shaped 2D region.</span>
+<span class="sd">    </span>
+<span class="sd">    This function integrates various stages of Voronoi diagram generation and provides </span>
+<span class="sd">    visualization and data-saving capabilities.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    boundary : str or dict</span>
+<span class="sd">        The path to the OBJ file defining the boundary or predefined geometry object</span>
+<span class="sd">    N_points : int</span>
+<span class="sd">        Number of initial seed points for the Voronoi diagram</span>
+<span class="sd">    points_seed : int, optional</span>
+<span class="sd">        Random seed for generating initial Poisson disk sampling points (default: 42)</span>
+<span class="sd">    margin : float, optional</span>
+<span class="sd">        Margin to add around the boundary for generating seed points (default: 0.01)</span>
+<span class="sd">    N_iter : int, optional</span>
+<span class="sd">        Number of iterations for Lloyd&#39;s algorithm to relax the points (default: 100000)</span>
+<span class="sd">    use_decay : bool, optional</span>
+<span class="sd">        Whether to use decay in Lloyd&#39;s algorithm (default: True)</span>
+<span class="sd">    edgeLength_threshold : float, optional</span>
+<span class="sd">        Length threshold for collapsing short edges in the Voronoi diagram (default: None)</span>
+<span class="sd">    cohesiveThickness : float, optional</span>
+<span class="sd">        Thickness of the cohesive zone for adjusting the Voronoi cells (default: None)</span>
+<span class="sd">    triangularMesh_minLength : float, optional</span>
+<span class="sd">        Minimum edge length for triangular meshing (default: None)</span>
+<span class="sd">    visualize : bool, optional</span>
+<span class="sd">        Whether to show visualization plots (default: False)</span>
+<span class="sd">    saveData : bool, optional</span>
+<span class="sd">        Whether to save the resulting data structures to files (default: True)</span>
+
+<span class="sd">    Use Cases</span>
+<span class="sd">    ---------</span>
+<span class="sd">    1. Basic Voronoi Diagram Generation:</span>
+<span class="sd">       Generate and visualize a Voronoi diagram within a given boundary.</span>
+<span class="sd">       Example: computeVoroni(&#39;boundary.obj&#39;, 100, visualize=True)</span>
+<span class="sd">    </span>
+<span class="sd">    2. Optimized Voronoi Diagram with Edge Collapsing:</span>
+<span class="sd">       Generate a Voronoi diagram and collapse edges shorter than a threshold.</span>
+<span class="sd">       Example: computeVoroni(&#39;boundary.obj&#39;, 100, edgeLength_threshold=0.1)</span>
+<span class="sd">    </span>
+<span class="sd">    3. Data Saving:</span>
+<span class="sd">       Save the resulting Voronoi cell and boundary data to files.</span>
+<span class="sd">       Example: computeVoroni(&#39;boundary.obj&#39;, 100, saveData=True)</span>
+
+<span class="sd">    Workflow</span>
+<span class="sd">    --------</span>
+<span class="sd">    1. Load the polygonal boundary from the specified OBJ file</span>
+<span class="sd">    2. Generate initial Poisson disk sampling points within the boundary</span>
+<span class="sd">    3. Relax the points using Lloyd&#39;s algorithm</span>
+<span class="sd">    4. Generate Voronoi cells based on the relaxed points</span>
+<span class="sd">    5. Optionally collapse short edges and optimize the mesh</span>
+<span class="sd">    6. Visualize results and save plots if requested</span>
+<span class="sd">    7. Save data to files if requested</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; computeVoroni(</span>
+<span class="sd">    ...     boundary=&#39;boundary.obj&#39;,</span>
+<span class="sd">    ...     N_points=100,</span>
+<span class="sd">    ...     points_seed=42,</span>
+<span class="sd">    ...     margin=0.01,</span>
+<span class="sd">    ...     N_iter=100000,</span>
+<span class="sd">    ...     use_decay=True,</span>
+<span class="sd">    ...     edgeLength_threshold=0.1,</span>
+<span class="sd">    ...     cohesiveThickness=0.1,</span>
+<span class="sd">    ...     triangularMesh_minLength=0.02,</span>
+<span class="sd">    ...     visualize=True,</span>
+<span class="sd">    ...     saveData=True</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>  <span class="c1"># Start timing</span>
+
+    <span class="n">names</span> <span class="o">=</span> <span class="n">generate_variable_names</span><span class="p">(</span><span class="n">boundary</span><span class="p">)</span>
+
+    <span class="c1"># Initialize Voronoi generators and optimizers</span>
+    <span class="n">voronoi_generator</span> <span class="o">=</span> <span class="n">VoronoiGenerator</span><span class="p">(</span><span class="n">buffer_factor</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">optimizer</span> <span class="o">=</span> <span class="n">MeshOptimizer</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Initialize a dictionary to hold the dynamically named variables</span>
+    <span class="n">variables</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="c1"># Use the generated variable names</span>
+    <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">IO</span><span class="o">.</span><span class="n">load_polygon_from_file</span><span class="p">(</span><span class="n">boundary</span><span class="p">)</span>
+    <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;seed_points&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">generate_poisson_points</span><span class="p">(</span><span class="n">domain</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]],</span> <span class="n">N</span><span class="o">=</span><span class="n">N_points</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="n">points_seed</span><span class="p">,</span> <span class="n">margin</span><span class="o">=</span><span class="n">margin</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Applying Lloyd&#39;s algorithm to relax the seed points...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;relaxed_points&quot;</span><span class="p">]],</span> <span class="n">_</span> <span class="o">=</span> <span class="n">lloyd</span><span class="p">(</span><span class="n">polygon</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]],</span> <span class="n">seed_points</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;seed_points&quot;</span><span class="p">]],</span> <span class="n">max_iterations</span><span class="o">=</span><span class="n">N_iter</span><span class="p">,</span> <span class="n">use_decay</span><span class="o">=</span><span class="n">use_decay</span><span class="p">)</span>
+    <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">voronoi_generator</span><span class="o">.</span><span class="n">generate_cells</span><span class="p">(</span><span class="n">domain</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]],</span> <span class="n">points</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;relaxed_points&quot;</span><span class="p">]])</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">analyze_voronoi_edges</span><span class="p">(</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">get_voronoi_stats</span><span class="p">(</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="s1">&#39;Report_OriginalVoronoi.txt&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="c1"># print(&#39;==========================================================&#39;)</span>
+    <span class="c1"># print(&#39;&#39;)</span>
+    <span class="c1"># print_short_boundaryEdges(variables[names[&quot;polygon_region&quot;]], N=10)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==========================================================&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==========================================================&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">optimize_voronoi_cells</span><span class="p">(</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">threshold</span><span class="o">=</span><span class="n">edgeLength_threshold</span><span class="p">)</span>
+        <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_polygonRegion&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">optimize_boundary</span><span class="p">(</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]],</span> <span class="n">threshold</span><span class="o">=</span><span class="n">edgeLength_threshold</span><span class="p">)</span>
+        <span class="n">get_voronoi_stats</span><span class="p">(</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">N</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="s1">&#39;Report_OptimizedVoronoi.txt&#39;</span><span class="p">)</span>
+
+    <span class="n">voronoiCompute_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>  <span class="c1"># End timing</span>
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">voronoiCompute_time</span> <span class="o">-</span> <span class="n">start_time</span>
+
+    <span class="c1"># Print the execution time in an excellent format</span>
+    <span class="n">hours</span><span class="p">,</span> <span class="n">rem</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">elapsed_time</span><span class="p">,</span> <span class="mi">3600</span><span class="p">)</span>
+    <span class="n">minutes</span><span class="p">,</span> <span class="n">seconds</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">rem</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Voronoi Computation Time: </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span><span class="si">:</span><span class="s2">02</span><span class="si">}</span><span class="s2"> Hours: </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">minutes</span><span class="p">)</span><span class="si">:</span><span class="s2">02</span><span class="si">}</span><span class="s2"> Minutes: </span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s2">05.2f</span><span class="si">}</span><span class="s2"> Seconds&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==========================================================&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Plotting functions</span>
+    <span class="n">plot_boundary_with_points</span><span class="p">(</span><span class="n">figure_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;figure_boundary_with_lloyds_seed_points&quot;</span><span class="p">],</span> <span class="n">polygon</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]],</span> <span class="n">points</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;relaxed_points&quot;</span><span class="p">]],</span> <span class="n">show_figure</span><span class="o">=</span><span class="n">visualize</span><span class="p">)</span>
+    <span class="n">plot_voronoi_cells</span><span class="p">(</span><span class="n">figure_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;figure_original_voronoi_cells&quot;</span><span class="p">],</span> <span class="n">voronoi_cells</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">show_figure</span><span class="o">=</span><span class="n">visualize</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">plot_voronoi_cells_with_short_edges</span><span class="p">(</span><span class="n">figure_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;figure_voronoi_with_short_edges&quot;</span><span class="p">],</span> <span class="n">voronoi_cells</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">threshold</span><span class="o">=</span><span class="n">edgeLength_threshold</span><span class="p">,</span> <span class="n">show_figure</span><span class="o">=</span><span class="n">visualize</span><span class="p">)</span>
+        <span class="n">plot_voronoi_cells</span><span class="p">(</span><span class="n">figure_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;figure_collapsed_voronoi_cells&quot;</span><span class="p">],</span> <span class="n">voronoi_cells</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">show_figure</span><span class="o">=</span><span class="n">visualize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">cohesiveThickness</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cohesive_adjuster</span> <span class="o">=</span> <span class="n">CohesiveZoneAdjuster</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.005</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">cells</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]]</span> <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]]</span>
+        <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;adjusted_voronoi_cells&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">cohesive_adjuster</span><span class="o">.</span><span class="n">adjust_fixed_thickness</span><span class="p">(</span><span class="n">cells</span><span class="o">=</span><span class="n">cells</span><span class="p">,</span> <span class="n">thickness</span><span class="o">=</span><span class="n">cohesiveThickness</span><span class="p">)</span>
+        <span class="n">plot_voronoi_cells</span><span class="p">(</span><span class="n">figure_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;figure_adjusted_voronoi_cells&quot;</span><span class="p">],</span> <span class="n">voronoi_cells</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;adjusted_voronoi_cells&quot;</span><span class="p">]],</span> <span class="n">show_figure</span><span class="o">=</span><span class="n">visualize</span><span class="p">)</span>
+    
+    <span class="c1"># Triangular Meshing (Optional)</span>
+    <span class="k">if</span> <span class="n">triangularMesh_minLength</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">geometry</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;adjusted_voronoi_cells&quot;</span><span class="p">]]</span> <span class="k">if</span> <span class="n">cohesiveThickness</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]]</span> <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]])</span>
+        <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;triangular_mesh&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">triangulate_geometry</span><span class="p">(</span><span class="n">geometry</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span> <span class="n">min_edge_length</span><span class="o">=</span><span class="n">triangularMesh_minLength</span><span class="p">,</span> <span class="n">save_mesh</span><span class="o">=</span><span class="n">saveData</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">names</span><span class="p">[</span><span class="s1">&#39;base_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">_TriangularMesh.inp&quot;</span><span class="p">,</span> <span class="n">file_format</span><span class="o">=</span><span class="s1">&#39;abaqus&#39;</span><span class="p">)</span>
+        <span class="n">plot_triangulated_geometry</span><span class="p">(</span><span class="n">geometry</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span> <span class="n">triangulation</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;triangular_mesh&quot;</span><span class="p">]],</span> <span class="n">figure_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;figure_triangulated_geometry&quot;</span><span class="p">],</span> <span class="n">show_figure</span><span class="o">=</span><span class="n">visualize</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">saveData</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">cohesiveThickness</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">target_cells</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;adjusted_voronoi_cells&quot;</span><span class="p">]]</span>
+            <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">original_cells</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">original_cells</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">target_cells</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_voronoi_cells&quot;</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">target_cells</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_cells&quot;</span><span class="p">]]</span>
+            <span class="n">original_cells</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">edgeLength_threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;collapsed_polygonRegion&quot;</span><span class="p">]]</span>
+        
+        <span class="c1"># Saving functions</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">IO</span><span class="o">.</span><span class="n">save_polygon_data</span><span class="p">(</span><span class="n">polygon</span><span class="o">=</span><span class="n">variables</span><span class="p">[</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_region&quot;</span><span class="p">]],</span> <span class="n">filename</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_data_file&quot;</span><span class="p">],</span> <span class="n">data_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;polygon_data&quot;</span><span class="p">])</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">IO</span><span class="o">.</span><span class="n">save_voronoi_data</span><span class="p">(</span><span class="n">target_cells</span><span class="o">=</span><span class="n">target_cells</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_data_file&quot;</span><span class="p">],</span> <span class="n">data_name</span><span class="o">=</span><span class="n">names</span><span class="p">[</span><span class="s2">&quot;voronoi_data&quot;</span><span class="p">],</span> <span class="n">original_cells</span><span class="o">=</span><span class="n">original_cells</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">IO</span><span class="o">.</span><span class="n">save_voronoi_to_obj</span><span class="p">(</span><span class="n">voronoi_cells</span><span class="o">=</span><span class="n">target_cells</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">names</span><span class="p">[</span><span class="s1">&#39;base_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">_Voronoi.obj&quot;</span><span class="p">)</span>
+        
+
+    <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>  <span class="c1"># End timing</span>
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">end_time</span> <span class="o">-</span> <span class="n">start_time</span>
+
+    <span class="c1"># Print the execution time in an excellent format</span>
+    <span class="n">hours</span><span class="p">,</span> <span class="n">rem</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">elapsed_time</span><span class="p">,</span> <span class="mi">3600</span><span class="p">)</span>
+    <span class="n">minutes</span><span class="p">,</span> <span class="n">seconds</span> <span class="o">=</span> <span class="nb">divmod</span><span class="p">(</span><span class="n">rem</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total Execution Time: </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">hours</span><span class="p">)</span><span class="si">:</span><span class="s2">02</span><span class="si">}</span><span class="s2"> Hours: </span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">minutes</span><span class="p">)</span><span class="si">:</span><span class="s2">02</span><span class="si">}</span><span class="s2"> Minutes: </span><span class="si">{</span><span class="n">seconds</span><span class="si">:</span><span class="s2">05.2f</span><span class="si">}</span><span class="s2"> Seconds&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;==========================================================&#39;</span><span class="p">)</span></div>
+
+
+
+<span class="c1"># Function to compute 2D Voronoi based on the given input file</span>
+<div class="viewcode-block" id="computeVoronoi2d_fromInputFile">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.computeVoronoi2d_fromInputFile">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">computeVoronoi2d_fromInputFile</span><span class="p">(</span><span class="n">input_file_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute the 2D Voronoi mesh from parameters specified in an input file.</span>
+
+<span class="sd">    This function reads the parameters from an input file and then calls the </span>
+<span class="sd">    `computeVoronoi2d` function to generate the Voronoi diagram based on those parameters.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    - input_file_path (str): The path to the input file containing the parameters.</span>
+
+<span class="sd">    The input file should have the following format:</span>
+<span class="sd">    ```</span>
+<span class="sd">    boundary = /path/to/boundary.obj</span>
+<span class="sd">    N_points = 100</span>
+<span class="sd">    points_seed = 42</span>
+<span class="sd">    margin = 0.01</span>
+<span class="sd">    N_iter = 100000</span>
+<span class="sd">    use_decay = True</span>
+<span class="sd">    edgeLength_threshold = 0.1</span>
+<span class="sd">    cohesiveThickness = 0.1</span>
+<span class="sd">    triangularMesh_minLength = 0.02</span>
+<span class="sd">    visualize = False</span>
+<span class="sd">    saveData = True</span>
+<span class="sd">    ```</span>
+
+<span class="sd">    Example usage:</span>
+<span class="sd">    ```</span>
+<span class="sd">    # Assuming the input file is located at &#39;./examples/input.in&#39;</span>
+<span class="sd">    computeVoronoi2d_fromInputFile(&#39;./examples/input.in&#39;)</span>
+<span class="sd">    ```</span>
+
+<span class="sd">    The function extracts the following parameters from the input file:</span>
+<span class="sd">    - boundary: The path to the OBJ file defining the boundary.</span>
+<span class="sd">    - N_points: Number of initial seed points for the Voronoi diagram.</span>
+<span class="sd">    - points_seed: Random seed for generating initial Poisson disk sampling points.</span>
+<span class="sd">    - margin: Margin to add around the boundary for generating seed points.</span>
+<span class="sd">    - N_iter: Number of iterations for Lloyd&#39;s algorithm to relax the points.</span>
+<span class="sd">    - use_decay: Boolean indicating whether to use decay in Lloyd&#39;s algorithm.</span>
+<span class="sd">    - edgeLength_threshold: Length threshold for collapsing short edges in the Voronoi diagram.</span>
+<span class="sd">    - cohesiveThickness: Thickness of the cohesive zone for adjusting the Voronoi cells.</span>
+<span class="sd">    - triangularMesh_minLength: Minimum edge length for triangular meshing.</span>
+<span class="sd">    - saveData: Boolean indicating whether to save the resulting data structures to .py files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="n">parse_input_file</span><span class="p">(</span><span class="n">input_file_path</span><span class="p">)</span>
+
+    <span class="c1"># Extract parameters from the dictionary</span>
+    <span class="n">boundary</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;boundary&quot;</span><span class="p">]</span>
+    <span class="n">N_points</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;N_points&quot;</span><span class="p">]</span>
+    <span class="n">points_seed</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;points_seed&quot;</span><span class="p">]</span>
+    <span class="n">margin</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;margin&quot;</span><span class="p">]</span>
+    <span class="n">N_iter</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;N_iter&quot;</span><span class="p">]</span>
+    <span class="n">use_decay</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;use_decay&quot;</span><span class="p">]</span>
+    <span class="n">edgeLength_threshold</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;edgeLength_threshold&quot;</span><span class="p">]</span>
+    <span class="n">cohesiveThickness</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;cohesiveThickness&quot;</span><span class="p">]</span>
+    <span class="n">triangularMesh_minLength</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;triangularMesh_minLength&quot;</span><span class="p">]</span>
+    <span class="n">visualize</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;visualize&quot;</span><span class="p">]</span>
+    <span class="n">saveData</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s2">&quot;saveData&quot;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">boundary</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Please at least provide an accurate path of the OBJ file as the boundary in the input file&#39;</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># Call the computeVoronoi2d function with the extracted parameters</span>
+    <span class="n">computeVoronoi2d</span><span class="p">(</span>
+        <span class="n">boundary</span><span class="o">=</span><span class="n">boundary</span><span class="p">,</span>
+        <span class="n">N_points</span><span class="o">=</span><span class="n">N_points</span><span class="p">,</span>
+        <span class="n">points_seed</span><span class="o">=</span><span class="n">points_seed</span><span class="p">,</span>
+        <span class="n">margin</span><span class="o">=</span><span class="n">margin</span><span class="p">,</span>
+        <span class="n">N_iter</span><span class="o">=</span><span class="n">N_iter</span><span class="p">,</span>
+        <span class="n">use_decay</span><span class="o">=</span><span class="n">use_decay</span><span class="p">,</span>
+        <span class="n">edgeLength_threshold</span><span class="o">=</span><span class="n">edgeLength_threshold</span><span class="p">,</span>
+        <span class="n">cohesiveThickness</span><span class="o">=</span><span class="n">cohesiveThickness</span><span class="p">,</span>
+        <span class="n">triangularMesh_minLength</span><span class="o">=</span><span class="n">triangularMesh_minLength</span><span class="p">,</span>
+        <span class="n">visualize</span><span class="o">=</span><span class="n">visualize</span><span class="p">,</span>
+        <span class="n">saveData</span><span class="o">=</span><span class="n">saveData</span>
+    <span class="p">)</span></div>
+
+
+
+<span class="c1"># Function to print the docstring of any object in the project. This function will help the user to see a detailed description of the object in a more structured way.</span>
+<div class="viewcode-block" id="print_docstring">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.print_docstring">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">print_docstring</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print the docstring of a given object with enhanced formatting.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    - obj: The object whose docstring is to be printed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">docstring</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="vm">__doc__</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">docstring</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No docstring available for this object.&quot;</span><span class="p">)</span>
+        <span class="k">return</span>
+    
+    <span class="c1"># Split the docstring into lines</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">docstring</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Extract the summary, parameters, returns, example usage, and other sections</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">returns</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">example_usage</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">others</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">current_section</span> <span class="o">=</span> <span class="n">summary</span>
+
+    <span class="c1"># param_pattern = re.compile(r&#39;\s*- \w+:&#39;)</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="n">stripped_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Parameters:&quot;</span><span class="p">):</span>
+            <span class="n">current_section</span> <span class="o">=</span> <span class="n">params</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Returns:&quot;</span><span class="p">):</span>
+            <span class="n">current_section</span> <span class="o">=</span> <span class="n">returns</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Example usage:&quot;</span><span class="p">):</span>
+            <span class="n">current_section</span> <span class="o">=</span> <span class="n">example_usage</span>
+            <span class="k">continue</span>
+        <span class="n">current_section</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    
+    <span class="c1"># Define a function to format a section</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_section</span><span class="p">(</span><span class="n">section</span><span class="p">,</span> <span class="n">title</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">section</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+                <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">50</span><span class="p">,</span>
+                <span class="n">title</span><span class="p">,</span>
+                <span class="s2">&quot;-&quot;</span> <span class="o">*</span> <span class="mi">50</span><span class="p">,</span>
+                <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">section</span><span class="p">),</span>
+                <span class="s2">&quot;&quot;</span>
+            <span class="p">])</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="c1"># Print the formatted docstring</span>
+    <span class="n">formatted_docstring</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+        <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="s2">&quot;DOCSTRING&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">50</span><span class="p">,</span>
+        <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">summary</span><span class="p">),</span>
+        <span class="n">format_section</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="s2">&quot;PARAMETERS&quot;</span><span class="p">),</span>
+        <span class="n">format_section</span><span class="p">(</span><span class="n">returns</span><span class="p">,</span> <span class="s2">&quot;RETURNS&quot;</span><span class="p">),</span>
+        <span class="n">format_section</span><span class="p">(</span><span class="n">example_usage</span><span class="p">,</span> <span class="s2">&quot;EXAMPLE USAGE&quot;</span><span class="p">),</span>
+        <span class="n">format_section</span><span class="p">(</span><span class="n">others</span><span class="p">,</span> <span class="s2">&quot;OTHER SECTIONS&quot;</span><span class="p">)</span>
+    <span class="p">])</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="n">formatted_docstring</span><span class="p">)</span></div>
+
+
+<span class="c1"># Function to analyze the statistics of the Voronoi Cells</span>
+<div class="viewcode-block" id="analyze_voronoi_cells">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.analyze_voronoi_cells">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">analyze_voronoi_cells</span><span class="p">(</span><span class="n">voronoi_cells</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyze the Voronoi cells to calculate useful statistics such as average grain size,</span>
+<span class="sd">    percentage of different grain sizes, and the lengths of the shortest edges.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    - voronoi_cells: List of Shapely Polygon or MultiPolygon objects representing the Voronoi cells.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">    - A dictionary containing various statistics about the Voronoi cells.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">edge_lengths</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cell_areas</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">voronoi_cells</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+            <span class="n">exterior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+            <span class="n">cell_areas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">area</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([</span><span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]])</span>
+                <span class="n">edge_lengths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">poly</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">geoms</span><span class="p">:</span>
+                <span class="n">exterior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+                <span class="n">cell_areas</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">area</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([</span><span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]])</span>
+                    <span class="n">edge_lengths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+
+    <span class="n">edge_lengths</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">edge_lengths</span><span class="p">)</span>
+    <span class="n">cell_areas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cell_areas</span><span class="p">)</span>
+
+    <span class="n">stats</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;average_edge_length&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">edge_lengths</span><span class="p">),</span>
+        <span class="s2">&quot;min_edge_length&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">edge_lengths</span><span class="p">),</span>
+        <span class="s2">&quot;max_edge_length&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">edge_lengths</span><span class="p">),</span>
+        <span class="s2">&quot;average_cell_area&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cell_areas</span><span class="p">),</span>
+        <span class="s2">&quot;min_cell_area&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">cell_areas</span><span class="p">),</span>
+        <span class="s2">&quot;max_cell_area&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">cell_areas</span><span class="p">),</span>
+        <span class="s2">&quot;total_cells&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">cell_areas</span><span class="p">),</span>
+        <span class="s2">&quot;total_edges&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_lengths</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="n">grain_size_bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">cell_areas</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">)</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;grain_size_distribution&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">grain_size_bins</span>
+
+    <span class="k">return</span> <span class="n">stats</span></div>
+
+
+<span class="c1"># Function to create the report of the statistics</span>
+<div class="viewcode-block" id="get_voronoi_stats">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.utils.get_voronoi_stats">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_voronoi_stats</span><span class="p">(</span><span class="n">voronoi_cells</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">file_name</span><span class="o">=</span><span class="s1">&#39;Report_OriginalVoronoi.txt&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Print useful statistics about the Voronoi cells, including the lengths of the shortest edges.</span>
+<span class="sd">    Save the print statements in the Report.txt file inside the &#39;Report&#39; directory.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    - voronoi_cells: List of Shapely Polygon or MultiPolygon objects representing the Voronoi cells.</span>
+<span class="sd">    - N: Optional, the number of shortest edges to print. If None, print all edges.</span>
+<span class="sd">    - threshold: Optional, the length threshold to print edges shorter than this value. If None, print edges based on N.</span>
+
+<span class="sd">    Prints the lengths of the edges in the format:</span>
+<span class="sd">    Index: &lt;index&gt;, Length: &lt;length&gt;</span>
+<span class="sd">    </span>
+<span class="sd">    Example usage:</span>
+<span class="sd">        - print_voronoi_statistics(voronoi_cells, N=10)</span>
+<span class="sd">        - print_voronoi_statistics(voronoi_cells, threshold=0.1)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">N</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">N</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">threshold</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Specify exactly one of &#39;N&#39; or &#39;threshold&#39;.&quot;</span><span class="p">)</span>
+
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">analyze_voronoi_cells</span><span class="p">(</span><span class="n">voronoi_cells</span><span class="p">)</span>
+
+    <span class="c1"># Ensure the &#39;Report&#39; directory exists</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s1">&#39;Reports&#39;</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s1">&#39;Reports&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Write to file inside &#39;Report&#39; directory</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;Reports&#39;</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)</span>
+    
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="c1"># Print general statistics</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Voronoi Cell Statistics:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Average Edge Length: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;average_edge_length&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Minimum Edge Length: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;min_edge_length&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Maximum Edge Length: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;max_edge_length&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Average Cell Area: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;average_cell_area&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Minimum Cell Area: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;min_cell_area&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Maximum Cell Area: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;max_cell_area&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total Number of Cells: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;total_cells&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total Number of Edges: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;total_edges&#39;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Print grain size distribution</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Grain Size Distribution:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s2">&quot;grain_size_distribution&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])):</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Grain size range </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;grain_size_distribution&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;grain_size_distribution&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;grain_size_distribution&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="si">}</span><span class="s2"> cells</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Collect all edges with their lengths for the shortest edges analysis</span>
+        <span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cell</span> <span class="ow">in</span> <span class="n">voronoi_cells</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+                <span class="n">exterior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([</span><span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]])</span>
+                    <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">line</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">MultiPolygon</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">poly</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">geoms</span><span class="p">:</span>
+                    <span class="n">exterior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="n">line</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([</span><span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">exterior_coords</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]])</span>
+                        <span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">line</span><span class="o">.</span><span class="n">length</span><span class="p">,</span> <span class="n">line</span><span class="p">))</span>
+
+        <span class="c1"># Sort edges by length</span>
+        <span class="n">edges</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># Determine the edges to print based on N or threshold</span>
+        <span class="k">if</span> <span class="n">N</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">edges_to_print</span> <span class="o">=</span> <span class="n">edges</span><span class="p">[:</span><span class="n">N</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">edges_to_print</span> <span class="o">=</span> <span class="p">[</span><span class="n">edge</span> <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span> <span class="k">if</span> <span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">threshold</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">edges_to_print</span><span class="p">:</span>
+            <span class="c1"># If there are no edges to print, print a message</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">There are no edges shorter than the threshold of </span><span class="si">{</span><span class="n">threshold</span><span class="si">}</span><span class="s1">.</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Print the shortest edges</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">10 Shortest Edge Lengths:</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="p">(</span><span class="n">length</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edges_to_print</span><span class="p">):</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Index: </span><span class="si">{</span><span class="n">idx</span><span class="si">}</span><span class="s2">, Length: </span><span class="si">{</span><span class="n">length</span><span class="si">:</span><span class="s2">.5f</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Md Jalal Uddin Rumi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

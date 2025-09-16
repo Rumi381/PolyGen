@@ -1,0 +1,736 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polygen.polygen2d.triangularMeshing &mdash; polygen 1.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+    <link rel="canonical" href="https://Rumi381.github.io/PolyGen/_modules/polygen/polygen2d/triangularMeshing.html" />
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=6efca38a"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/custom.js?v=14139ab5"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            polygen
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">polygen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">polygen</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">polygen.polygen2d.triangularMeshing</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for polygen.polygen2d.triangularMeshing</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">meshio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">triangle</span><span class="w"> </span><span class="kn">import</span> <span class="n">triangulate</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">LineString</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterable</span>
+
+<div class="viewcode-block" id="TriangularMesher">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.triangularMeshing.TriangularMesher">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">TriangularMesher</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A class to handle triangular meshing of polygonal geometries.</span>
+<span class="sd">    </span>
+<span class="sd">    This class provides functionality to create high-quality triangular meshes</span>
+<span class="sd">    from either single polygons (possibly with holes) or multiple polygons</span>
+<span class="sd">    (e.g., Voronoi cells). It uses the Triangle library for mesh generation</span>
+<span class="sd">    and ensures quality constraints are met.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    min_edge_length : float</span>
+<span class="sd">        Minimum desired edge length for triangles</span>
+<span class="sd">    min_angle : float</span>
+<span class="sd">        Minimum angle (in degrees) for triangle quality control</span>
+<span class="sd">    max_iterations : int</span>
+<span class="sd">        Maximum number of refinement iterations</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="TriangularMesher.__init__">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.triangularMeshing.TriangularMesher.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_edge_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">min_angle</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span> 
+                 <span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        min_edge_length : float</span>
+<span class="sd">            Minimum desired edge length for triangles</span>
+<span class="sd">        min_angle : float, optional</span>
+<span class="sd">            Minimum angle in degrees, by default 30.0</span>
+<span class="sd">        max_iterations : int, optional</span>
+<span class="sd">            Maximum refinement iterations, by default 10</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_edge_length</span> <span class="o">=</span> <span class="n">min_edge_length</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_angle</span> <span class="o">=</span> <span class="n">min_angle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="n">max_iterations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_area</span> <span class="o">=</span> <span class="p">(</span><span class="n">min_edge_length</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mi">4</span></div>
+
+        
+    <span class="k">def</span><span class="w"> </span><span class="nf">_subdivide_polygon_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cell</span><span class="p">:</span> <span class="n">Polygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Polygon</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Subdivide polygon edges to satisfy maximum segment length constraint.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cell : Polygon</span>
+<span class="sd">            Input polygon with optional holes</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Polygon</span>
+<span class="sd">            Refined polygon with subdivided edges</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">has_interiors</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">interiors</span><span class="p">)</span>
+        
+        <span class="k">def</span><span class="w"> </span><span class="nf">subdivide_ring</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+            <span class="n">new_coords</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span> <span class="o">=</span> <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">segment</span> <span class="o">=</span> <span class="n">LineString</span><span class="p">([</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">])</span>
+                <span class="n">n_subdiv</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">segment</span><span class="o">.</span><span class="n">length</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_edge_length</span><span class="p">))</span>
+                
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_subdiv</span><span class="p">):</span>
+                    <span class="n">t</span> <span class="o">=</span> <span class="n">j</span> <span class="o">/</span> <span class="n">n_subdiv</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="n">p2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">p1</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">y</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">t</span> <span class="o">*</span> <span class="p">(</span><span class="n">p2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">p1</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">new_coords</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
+            
+            <span class="n">new_coords</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_coords</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">new_coords</span>
+
+        <span class="n">new_exterior</span> <span class="o">=</span> <span class="n">subdivide_ring</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">))</span>
+        
+        <span class="k">if</span> <span class="n">has_interiors</span><span class="p">:</span>
+            <span class="n">new_interiors</span> <span class="o">=</span> <span class="p">[</span><span class="n">subdivide_ring</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">interior</span><span class="o">.</span><span class="n">coords</span><span class="p">))</span> 
+                           <span class="k">for</span> <span class="n">interior</span> <span class="ow">in</span> <span class="n">cell</span><span class="o">.</span><span class="n">interiors</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">new_exterior</span><span class="p">,</span> <span class="n">holes</span><span class="o">=</span><span class="n">new_interiors</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">new_exterior</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_triangle_angles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coords</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute angles of a triangle in degrees.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        coords : ndarray</span>
+<span class="sd">            (3,2) array of triangle vertex coordinates</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            Three angles in degrees</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">length_sq</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">**</span><span class="mi">2</span>
+
+        <span class="n">s0</span> <span class="o">=</span> <span class="n">length_sq</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">s1</span> <span class="o">=</span> <span class="n">length_sq</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">s2</span> <span class="o">=</span> <span class="n">length_sq</span><span class="p">(</span><span class="n">coords</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">coords</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        
+        <span class="n">sides_sq</span> <span class="o">=</span> <span class="p">[</span><span class="n">s0</span><span class="p">,</span> <span class="n">s1</span><span class="p">,</span> <span class="n">s2</span><span class="p">]</span>
+        <span class="n">angles</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">a_sq</span> <span class="o">=</span> <span class="n">sides_sq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">b_sq</span> <span class="o">=</span> <span class="n">sides_sq</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">c_sq</span> <span class="o">=</span> <span class="n">sides_sq</span><span class="p">[(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span><span class="o">%</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">numerator</span> <span class="o">=</span> <span class="p">(</span><span class="n">b_sq</span> <span class="o">+</span> <span class="n">c_sq</span> <span class="o">-</span> <span class="n">a_sq</span><span class="p">)</span>
+            <span class="n">denominator</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">b_sq</span> <span class="o">*</span> <span class="n">c_sq</span><span class="p">)</span>
+            <span class="n">angle</span> <span class="o">=</span> <span class="mf">180.0</span> <span class="k">if</span> <span class="n">denominator</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">numerator</span> <span class="o">/</span> <span class="n">denominator</span><span class="p">))</span>
+            <span class="n">angles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">angle</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">angles</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_mesh_quality</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if mesh satisfies quality constraints.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mesh : dict</span>
+<span class="sd">            Triangle mesh dictionary with vertices and triangles</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            True if mesh satisfies constraints</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">vertices</span> <span class="o">=</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;vertices&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">tri_indices</span> <span class="ow">in</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;triangles&#39;</span><span class="p">]:</span>
+            <span class="n">tri_coords</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="n">tri_indices</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_compute_triangle_angles</span><span class="p">(</span><span class="n">tri_coords</span><span class="p">))</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_angle</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">tri_coords</span><span class="p">)</span><span class="o">.</span><span class="n">area</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_area</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_triangulate_cell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cell</span><span class="p">:</span> <span class="n">Polygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create quality triangular mesh for a single polygon.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cell : Polygon</span>
+<span class="sd">            Input polygon with optional holes</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            List of triangular polygons</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">is_valid</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">cell</span><span class="o">.</span><span class="n">is_empty</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="n">refined_cell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subdivide_polygon_edges</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+        <span class="n">has_interiors</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">refined_cell</span><span class="o">.</span><span class="n">interiors</span><span class="p">)</span>
+        
+        <span class="c1"># Prepare vertices and segments</span>
+        <span class="n">boundary_coords</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">segments</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">vertex_count</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c1"># Process exterior</span>
+        <span class="n">exterior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">refined_cell</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">boundary_coords</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">)</span>
+        <span class="n">segments</span><span class="o">.</span><span class="n">extend</span><span class="p">([(</span><span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">))</span> 
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">))])</span>
+        <span class="n">vertex_count</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">exterior_coords</span><span class="p">)</span>
+        
+        <span class="c1"># Process interiors if they exist</span>
+        <span class="k">if</span> <span class="n">has_interiors</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">interior</span> <span class="ow">in</span> <span class="n">refined_cell</span><span class="o">.</span><span class="n">interiors</span><span class="p">:</span>
+                <span class="n">interior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">interior</span><span class="o">.</span><span class="n">coords</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">hole_segments</span> <span class="o">=</span> <span class="p">[(</span><span class="n">vertex_count</span> <span class="o">+</span> <span class="n">i</span><span class="p">,</span> 
+                                <span class="n">vertex_count</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">interior_coords</span><span class="p">))</span>
+                               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">interior_coords</span><span class="p">))]</span>
+                <span class="n">segments</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">hole_segments</span><span class="p">)</span>
+                <span class="n">boundary_coords</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">interior_coords</span><span class="p">)</span>
+                <span class="n">vertex_count</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">interior_coords</span><span class="p">)</span>
+
+        <span class="c1"># Prepare PSLG</span>
+        <span class="n">cell_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;vertices&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">boundary_coords</span><span class="p">),</span>
+            <span class="s1">&#39;segments&#39;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">segments</span><span class="p">)</span>
+        <span class="p">}</span>
+        
+        <span class="k">if</span> <span class="n">has_interiors</span><span class="p">:</span>
+            <span class="n">holes</span> <span class="o">=</span> <span class="p">[[</span><span class="n">Polygon</span><span class="p">(</span><span class="n">interior</span><span class="p">)</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">interior</span><span class="p">)</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">y</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">interior</span> <span class="ow">in</span> <span class="n">refined_cell</span><span class="o">.</span><span class="n">interiors</span><span class="p">]</span>
+            <span class="n">cell_dict</span><span class="p">[</span><span class="s1">&#39;holes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">holes</span><span class="p">)</span>
+
+        <span class="c1"># Initial triangulation</span>
+        <span class="n">init_cmd</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;pqa</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">target_area</span><span class="si">:</span><span class="s1">.6f</span><span class="si">}</span><span class="s1">q</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_angle</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">mesh</span> <span class="o">=</span> <span class="n">triangulate</span><span class="p">(</span><span class="n">cell_dict</span><span class="p">,</span> <span class="n">init_cmd</span><span class="p">)</span>
+
+        <span class="c1"># Iterative refinement</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_mesh_quality</span><span class="p">(</span><span class="n">mesh</span><span class="p">):</span>
+                <span class="k">break</span>
+                
+            <span class="n">refine_dict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;vertices&#39;</span><span class="p">:</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;vertices&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;triangles&#39;</span><span class="p">:</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;triangles&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;segments&#39;</span><span class="p">:</span> <span class="n">segments</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="s1">&#39;holes&#39;</span> <span class="ow">in</span> <span class="n">cell_dict</span><span class="p">:</span>
+                <span class="n">refine_dict</span><span class="p">[</span><span class="s1">&#39;holes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_dict</span><span class="p">[</span><span class="s1">&#39;holes&#39;</span><span class="p">]</span>
+            
+            <span class="n">mesh</span> <span class="o">=</span> <span class="n">triangulate</span><span class="p">(</span><span class="n">refine_dict</span><span class="p">,</span> <span class="sa">f</span><span class="s1">&#39;pra</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">target_area</span><span class="si">}</span><span class="s1">q</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">min_angle</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Convert to polygons &amp; clip</span>
+        <span class="n">cell_triangles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">triangle_indices</span> <span class="ow">in</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;triangles&#39;</span><span class="p">]:</span>
+            <span class="n">tri_vertices</span> <span class="o">=</span> <span class="n">mesh</span><span class="p">[</span><span class="s1">&#39;vertices&#39;</span><span class="p">][</span><span class="n">triangle_indices</span><span class="p">]</span>
+            <span class="n">tri_poly</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">tri_vertices</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">refined_cell</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">tri_poly</span><span class="p">):</span>
+                <span class="n">cell_triangles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tri_poly</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">intersection</span> <span class="o">=</span> <span class="n">tri_poly</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">refined_cell</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">intersection</span><span class="o">.</span><span class="n">is_empty</span> <span class="ow">and</span> 
+                    <span class="n">intersection</span><span class="o">.</span><span class="n">geom_type</span> <span class="o">==</span> <span class="s1">&#39;Polygon&#39;</span> <span class="ow">and</span>
+                    <span class="n">intersection</span><span class="o">.</span><span class="n">area</span> <span class="o">&gt;</span> <span class="mf">0.95</span> <span class="o">*</span> <span class="n">tri_poly</span><span class="o">.</span><span class="n">area</span><span class="p">):</span>
+                    <span class="n">cell_triangles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intersection</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cell_triangles</span>
+
+<div class="viewcode-block" id="TriangularMesher.create_mesh">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.triangularMeshing.TriangularMesher.create_mesh">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create quality triangular mesh for polygon(s).</span>
+
+<span class="sd">        This method creates a high-quality triangular mesh for either a single polygon</span>
+<span class="sd">        (possibly with holes) or multiple polygons (e.g., Voronoi cells). The mesh</span>
+<span class="sd">        satisfies constraints on minimum edge length and minimum angle.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        geometry : Union[Polygon, List[Polygon]]</span>
+<span class="sd">            Either a single polygon (possibly with holes) or a list of polygons</span>
+<span class="sd">            to triangulate. Polygons can have interior holes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Union[List[Polygon], Dict[int, List[Polygon]]]</span>
+<span class="sd">            If input is a single polygon:</span>
+<span class="sd">                List of triangular polygons forming the mesh</span>
+<span class="sd">            If input is a list of polygons:</span>
+<span class="sd">                Dictionary mapping polygon index to list of triangular polygons</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        - Uses Triangle library for mesh generation</span>
+<span class="sd">        - Applies iterative refinement to meet quality constraints</span>
+<span class="sd">        - Handles both simple polygons and polygons with holes</span>
+<span class="sd">        - For multiple polygons, indices in output dictionary match input list indices</span>
+<span class="sd">        </span>
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; mesher = TriangularMesher(min_edge_length=0.1)</span>
+<span class="sd">        &gt;&gt;&gt; # Single polygon</span>
+<span class="sd">        &gt;&gt;&gt; triangles = mesher.triangulate(polygon)</span>
+<span class="sd">        &gt;&gt;&gt; # Multiple polygons</span>
+<span class="sd">        &gt;&gt;&gt; cell_triangulations = mesher.triangulate([poly1, poly2, poly3])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_triangulate_cell</span><span class="p">(</span><span class="n">geometry</span><span class="p">)</span>
+        
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">):</span>
+            <span class="n">cell_triangulations</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">geometry</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cell</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Item </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is not a Polygon. Skipping...&quot;</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">is_valid</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">cell</span><span class="o">.</span><span class="n">is_empty</span><span class="p">):</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Cell </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2"> is invalid or empty. Skipping...&quot;</span><span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">cell_triangulations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_triangulate_cell</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error triangulating cell </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">cell_triangulations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">return</span> <span class="n">cell_triangulations</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Input must be either a Polygon or an iterable of Polygons&quot;</span><span class="p">)</span></div>
+
+        
+    <span class="k">def</span><span class="w"> </span><span class="nf">_convert_to_meshio</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">geometry</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]],</span> 
+                       <span class="n">triangulation</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]]])</span> <span class="o">-&gt;</span> <span class="s1">&#39;meshio.Mesh&#39;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert triangulated geometry to meshio format.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        geometry : Union[Polygon, List[Polygon]]</span>
+<span class="sd">            Original input geometry</span>
+<span class="sd">        triangulation : Union[List[Polygon], Dict[int, List[Polygon]]]</span>
+<span class="sd">            Triangulation result from create_mesh method</span>
+<span class="sd">            </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        meshio.Mesh</span>
+<span class="sd">            Mesh in meshio format with appropriate cell data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Initialize data structures</span>
+        <span class="n">all_vertices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">vertex_to_index</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">triangles</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cell_ids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">index_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="k">def</span><span class="w"> </span><span class="nf">clean_coords</span><span class="p">(</span><span class="n">coords</span><span class="p">):</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;Remove duplicate and repeated vertices from coordinate list.&quot;&quot;&quot;</span>
+            <span class="n">rounded_coords</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">12</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">12</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">coords</span><span class="p">]</span>
+            <span class="n">cleaned</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="n">rounded_coords</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">cleaned</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">cleaned</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">):</span>
+                    <span class="n">cleaned</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coord</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cleaned</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">cleaned</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cleaned</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">):</span>
+                <span class="n">cleaned</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cleaned</span>
+        
+        <span class="k">def</span><span class="w"> </span><span class="nf">process_triangles</span><span class="p">(</span><span class="n">tri_list</span><span class="p">,</span> <span class="n">cell_id</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+            <span class="k">nonlocal</span> <span class="n">index_counter</span>
+            <span class="k">for</span> <span class="n">triangle</span> <span class="ow">in</span> <span class="n">tri_list</span><span class="p">:</span>
+                <span class="n">coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">triangle</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+                <span class="n">cleaned_coords</span> <span class="o">=</span> <span class="n">clean_coords</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cleaned_coords</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="k">continue</span>  <span class="c1"># Skip invalid triangles silently</span>
+                
+                <span class="c1"># Convert vertices to indices</span>
+                <span class="n">triangle_indices</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">cleaned_coords</span><span class="p">:</span>
+                    <span class="n">coord_tuple</span> <span class="o">=</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">coord_tuple</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">vertex_to_index</span><span class="p">:</span>
+                        <span class="n">vertex_to_index</span><span class="p">[</span><span class="n">coord_tuple</span><span class="p">]</span> <span class="o">=</span> <span class="n">index_counter</span>
+                        <span class="n">all_vertices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coord_tuple</span><span class="p">)</span>
+                        <span class="n">index_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">triangle_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vertex_to_index</span><span class="p">[</span><span class="n">coord_tuple</span><span class="p">])</span>
+                
+                <span class="c1"># Skip degenerate triangles</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">triangle_indices</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                
+                <span class="n">triangles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">triangle_indices</span><span class="p">)</span>
+                <span class="n">cell_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cell_id</span><span class="p">)</span>
+        
+        <span class="c1"># Process geometry based on type</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">):</span>
+            <span class="n">process_triangles</span><span class="p">(</span><span class="n">triangulation</span><span class="p">,</span> <span class="n">cell_id</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">cell_idx</span><span class="p">,</span> <span class="n">cell_triangles</span> <span class="ow">in</span> <span class="n">triangulation</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">process_triangles</span><span class="p">(</span><span class="n">cell_triangles</span><span class="p">,</span> <span class="n">cell_id</span><span class="o">=</span><span class="n">cell_idx</span><span class="p">)</span>
+        
+        <span class="c1"># Ensure we have valid triangles</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">triangles</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No valid triangles generated during mesh conversion&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Convert to numpy arrays</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">all_vertices</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">points</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">points</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span><span class="n">points</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)])</span>
+        
+        <span class="c1"># Create and return mesh</span>
+        <span class="k">return</span> <span class="n">meshio</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span>
+            <span class="n">points</span><span class="o">=</span><span class="n">points</span><span class="p">,</span>
+            <span class="n">cells</span><span class="o">=</span><span class="p">[(</span><span class="s2">&quot;triangle&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">triangles</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">))],</span>
+            <span class="n">cell_data</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;original_cell_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">cell_ids</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)],</span>
+                <span class="s2">&quot;triangle_id&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">triangles</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)]</span>
+            <span class="p">}</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="TriangularMesher.save_mesh">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.triangularMeshing.TriangularMesher.save_mesh">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                <span class="n">geometry</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]],</span>
+                <span class="n">triangulation</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]]],</span> 
+                <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+                <span class="n">output_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">file_format</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save triangulated geometry to any meshio-supported format.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        geometry : Union[Polygon, List[Polygon]]</span>
+<span class="sd">            Input geometry to triangulate and save</span>
+<span class="sd">        triangulation : Union[List[Polygon], Dict[int, List[Polygon]]]</span>
+<span class="sd">            Triangulation result from create_mesh method</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            Output filename with appropriate extension</span>
+<span class="sd">        output_dir : str, optional</span>
+<span class="sd">            Directory to save the file. If None, uses &#39;meshFiles&#39;</span>
+<span class="sd">        file_format : str, optional</span>
+<span class="sd">            Output format (e.g., &#39;vtk&#39;, &#39;abaqus&#39;). If None, inferred from filename</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Full path to the saved file</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; mesher = TriangularMesher(min_edge_length=0.1)</span>
+<span class="sd">        &gt;&gt;&gt; # Save single polygon mesh</span>
+<span class="sd">        &gt;&gt;&gt; mesher.save_mesh(polygon, &quot;mesh.vtk&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; # Save multiple polygons with explicit format</span>
+<span class="sd">        &gt;&gt;&gt; mesher.save_mesh(cells, &quot;mesh.inp&quot;, output_dir=&quot;results&quot;, </span>
+<span class="sd">        ...                 file_format=&quot;abaqus&quot;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Handle output directory</span>
+            <span class="k">if</span> <span class="n">output_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">output_dir</span> <span class="o">=</span> <span class="s2">&quot;meshFiles&quot;</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+            <span class="c1"># Create full file path</span>
+            <span class="n">full_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Saving triangular mesh to: </span><span class="si">{</span><span class="n">full_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="c1"># Get format mapping from meshio</span>
+            <span class="n">format_mapping</span> <span class="o">=</span> <span class="n">meshio</span><span class="o">.</span><span class="n">_helpers</span><span class="o">.</span><span class="n">extension_to_filetypes</span>
+            <span class="n">supported_extensions</span> <span class="o">=</span> <span class="p">{</span><span class="n">ext</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">format_mapping</span><span class="o">.</span><span class="n">keys</span><span class="p">()}</span>
+            
+            <span class="c1"># Determine format</span>
+            <span class="k">if</span> <span class="n">file_format</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">file_extension</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filename</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">file_extension</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;No file extension provided. Supported: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">supported_extensions</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                
+                <span class="n">clean_extension</span> <span class="o">=</span> <span class="n">file_extension</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">clean_extension</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">supported_extensions</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Unsupported extension: &#39;</span><span class="si">{</span><span class="n">clean_extension</span><span class="si">}</span><span class="s2">&#39;. Supported: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">supported_extensions</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                
+                <span class="n">used_format</span> <span class="o">=</span> <span class="n">format_mapping</span><span class="p">[</span><span class="n">file_extension</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using format &#39;</span><span class="si">{</span><span class="n">used_format</span><span class="si">}</span><span class="s2">&#39; for extension &#39;</span><span class="si">{</span><span class="n">clean_extension</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">valid_formats</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">formats</span> <span class="ow">in</span> <span class="n">format_mapping</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                    <span class="n">valid_formats</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">formats</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">file_format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">valid_formats</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Unsupported format: &#39;</span><span class="si">{</span><span class="n">file_format</span><span class="si">}</span><span class="s2">&#39;. Supported: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">valid_formats</span><span class="p">))</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">used_format</span> <span class="o">=</span> <span class="n">file_format</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            
+            <span class="c1"># Create mesh and save</span>
+            <span class="c1"># triangulation = self.create_mesh(geometry)</span>
+            <span class="n">mesh</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_to_meshio</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">triangulation</span><span class="p">)</span>
+            <span class="n">mesh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="n">file_format</span><span class="o">=</span><span class="n">used_format</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully saved triangular mesh to: </span><span class="si">{</span><span class="n">full_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">full_path</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error saving mesh to </span><span class="si">{</span><span class="n">full_path</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="s1">&#39;full_path&#39;</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="nb">locals</span><span class="p">()</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="n">filename</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span></div>
+
+
+<div class="viewcode-block" id="TriangularMesher.triangulateCells_simple">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.triangularMeshing.TriangularMesher.triangulateCells_simple">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">triangulateCells_simple</span><span class="p">(</span><span class="n">voronoi_cells</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Triangulate each Voronoi cell separately, including the centroid point in the triangulation,</span>
+<span class="sd">        and maintaining cell boundaries.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        voronoi_cells : list of shapely.geometry.Polygon</span>
+<span class="sd">            The clipped Voronoi cells from generate_voronoi_cells</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">        dict : Dictionary mapping cell index to list of triangles for that cell</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPoint</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">shapely</span><span class="w"> </span><span class="kn">import</span> <span class="n">delaunay_triangles</span>
+        
+        <span class="n">cell_triangulations</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">cell</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">voronoi_cells</span><span class="p">):</span>
+            <span class="c1"># Check if the cell is valid</span>
+            <span class="k">if</span> <span class="n">cell</span><span class="o">.</span><span class="n">is_valid</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">cell</span><span class="o">.</span><span class="n">is_empty</span><span class="p">:</span>
+                <span class="c1"># Get the exterior coordinates of the cell</span>
+                <span class="n">exterior_coords</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">coords</span><span class="p">)</span>
+                <span class="c1"># Get the centroid coordinate</span>
+                <span class="n">centroid_coord</span> <span class="o">=</span> <span class="p">(</span><span class="n">cell</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">cell</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+                <span class="c1"># Combine the exterior coordinates with the centroid</span>
+                <span class="n">all_points</span> <span class="o">=</span> <span class="n">exterior_coords</span> <span class="o">+</span> <span class="p">[</span><span class="n">centroid_coord</span><span class="p">]</span>
+                <span class="c1"># Create a MultiPoint geometry</span>
+                <span class="n">multipoint</span> <span class="o">=</span> <span class="n">MultiPoint</span><span class="p">(</span><span class="n">all_points</span><span class="p">)</span>
+                <span class="c1"># Perform Delaunay triangulation on the points</span>
+                <span class="n">triangles</span> <span class="o">=</span> <span class="n">delaunay_triangles</span><span class="p">(</span><span class="n">multipoint</span><span class="p">)</span>
+                <span class="c1"># Clip the triangles to the cell polygon</span>
+                <span class="n">cell_triangles</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">triangle</span> <span class="ow">in</span> <span class="n">triangles</span><span class="o">.</span><span class="n">geoms</span><span class="p">:</span>
+                    <span class="c1"># Intersect the triangle with the cell</span>
+                    <span class="n">intersection</span> <span class="o">=</span> <span class="n">triangle</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">cell</span><span class="p">)</span>
+                    <span class="c1"># Check if the intersection is a Polygon (it might be a LineString or GeometryCollection)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">intersection</span><span class="o">.</span><span class="n">is_empty</span> <span class="ow">and</span> <span class="n">intersection</span><span class="o">.</span><span class="n">geom_type</span> <span class="o">==</span> <span class="s1">&#39;Polygon&#39;</span><span class="p">:</span>
+                        <span class="n">cell_triangles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intersection</span><span class="p">)</span>
+                <span class="n">cell_triangulations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">cell_triangles</span>
+        
+        <span class="k">return</span> <span class="n">cell_triangulations</span></div>
+</div>
+
+
+<div class="viewcode-block" id="triangulate_geometry">
+<a class="viewcode-back" href="../../../polygen.polygen2d.html#polygen.polygen2d.triangularMeshing.triangulate_geometry">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">triangulate_geometry</span><span class="p">(</span>
+    <span class="n">geometry</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Polygon</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]],</span> 
+    <span class="n">min_edge_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">min_angle</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">30.0</span><span class="p">,</span>
+    <span class="n">max_iterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="n">save_mesh</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">file_format</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">],</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Polygon</span><span class="p">]]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a high-quality triangular mesh for polygon(s).</span>
+
+<span class="sd">    This function provides a simple interface to create triangular meshes for either</span>
+<span class="sd">    a single polygon or multiple polygons. It handles polygons with or without interior</span>
+<span class="sd">    holes and ensures the resulting mesh meets quality constraints for minimum edge</span>
+<span class="sd">    length and minimum angles.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    geometry : Union[Polygon, List[Polygon]]</span>
+<span class="sd">        Input geometry to triangulate. Can be either:</span>
+<span class="sd">        * A single shapely.geometry.Polygon (possibly with holes)</span>
+<span class="sd">        * A list of shapely.geometry.Polygon (e.g., Voronoi cells)</span>
+<span class="sd">    min_edge_length : float</span>
+<span class="sd">        Minimum desired edge length for triangles in the mesh.</span>
+<span class="sd">        Controls the mesh density.</span>
+<span class="sd">    min_angle : float, optional</span>
+<span class="sd">        Minimum allowed angle in degrees for triangles, by default 30.0.</span>
+<span class="sd">        Higher values (up to 34) create better-quality triangles but</span>
+<span class="sd">        may require more iterations.</span>
+<span class="sd">    max_iterations : int, optional</span>
+<span class="sd">        Maximum number of refinement iterations, by default 10.</span>
+<span class="sd">        Increase if mesh quality constraints are not being met.</span>
+<span class="sd">    save_mesh : bool, optional</span>
+<span class="sd">        Whether to save the mesh to a file, by default False.</span>
+<span class="sd">        If True, either filename must be provided or a default will be used.</span>
+<span class="sd">    filename : str, optional</span>
+<span class="sd">        Output filename with appropriate extension for mesh saving.</span>
+<span class="sd">        Required if save_mesh is True and must include a valid extension.</span>
+<span class="sd">        Common extensions: .vtk, .msh, .inp (Abaqus), .ans (ANSYS)</span>
+<span class="sd">    output_dir : str, optional</span>
+<span class="sd">        Directory to save the mesh file. If None, uses &#39;meshFiles&#39;.</span>
+<span class="sd">        Directory will be created if it doesn&#39;t exist.</span>
+<span class="sd">    file_format : str, optional</span>
+<span class="sd">        Output format override (e.g., &#39;vtk&#39;, &#39;abaqus&#39;, &#39;ansys&#39;).</span>
+<span class="sd">        If None, format is inferred from filename extension.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Union[List[Polygon], Dict[int, List[Polygon]]]</span>
+<span class="sd">        If input is a single polygon:</span>
+<span class="sd">            List of triangular polygons forming the mesh</span>
+<span class="sd">        If input is a list of polygons:</span>
+<span class="sd">            Dictionary mapping polygon index to list of triangular polygons</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        If save_mesh is True but no valid filename is provided.</span>
+<span class="sd">        If the specified file format is not supported.</span>
+<span class="sd">    RuntimeError</span>
+<span class="sd">        If there are issues during mesh saving.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    - Uses the Triangle library (J.R. Shewchuk) for mesh generation</span>
+<span class="sd">    - Applies iterative refinement to meet quality constraints</span>
+<span class="sd">    - Automatically handles both simple polygons and polygons with holes</span>
+<span class="sd">    - For multiple polygons, indices in output dictionary match input list indices</span>
+<span class="sd">    - Invalid or empty polygons are skipped with a warning message</span>
+<span class="sd">    - Failed triangulations return an empty list for that polygon</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; # Basic triangulation without saving</span>
+<span class="sd">    &gt;&gt;&gt; domain = Polygon([(0,0), (1,0), (1,1), (0,1)],</span>
+<span class="sd">    ...                 holes=[[(0.2,0.2), (0.4,0.2), (0.4,0.4), (0.2,0.4)]])</span>
+<span class="sd">    &gt;&gt;&gt; triangles = triangulate_geometry(domain, min_edge_length=0.1)</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; # Triangulate and save mesh</span>
+<span class="sd">    &gt;&gt;&gt; cells = [poly1, poly2, poly3]  # list of shapely Polygons</span>
+<span class="sd">    &gt;&gt;&gt; cell_triangulations = triangulate_geometry(</span>
+<span class="sd">    ...     cells, </span>
+<span class="sd">    ...     min_edge_length=0.1,</span>
+<span class="sd">    ...     min_angle=32,</span>
+<span class="sd">    ...     save_mesh=True,</span>
+<span class="sd">    ...     filename=&quot;mesh.vtk&quot;,</span>
+<span class="sd">    ...     output_dir=&quot;results&quot;</span>
+<span class="sd">    ... )</span>
+
+<span class="sd">    See Also</span>
+<span class="sd">    --------</span>
+<span class="sd">    TriangularMesher : The class that implements the triangulation functionality</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mesher</span> <span class="o">=</span> <span class="n">TriangularMesher</span><span class="p">(</span><span class="n">min_edge_length</span><span class="p">,</span> <span class="n">min_angle</span><span class="p">,</span> <span class="n">max_iterations</span><span class="p">)</span>
+    
+    <span class="c1"># Create the mesh</span>
+    <span class="n">triangulation</span> <span class="o">=</span> <span class="n">mesher</span><span class="o">.</span><span class="n">create_mesh</span><span class="p">(</span><span class="n">geometry</span><span class="p">)</span>
+    
+    <span class="c1"># Save if requested</span>
+    <span class="k">if</span> <span class="n">save_mesh</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Create default filename based on input type</span>
+            <span class="n">base_name</span> <span class="o">=</span> <span class="s2">&quot;single_polygon&quot;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;multi_polygon&quot;</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">_mesh.obj&quot;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No filename provided. Using default: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">mesher</span><span class="o">.</span><span class="n">save_mesh</span><span class="p">(</span><span class="n">geometry</span><span class="p">,</span> <span class="n">triangulation</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">file_format</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: Failed to save mesh: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Returning triangulation result anyway.&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">triangulation</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Md Jalal Uddin Rumi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
