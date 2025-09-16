@@ -22,7 +22,7 @@ pip install -e .
 
 ## Accessing Documentation
 
-To access the documentation for any function, class, or method in the project, please visit the official documentation page of polygen [View the Docs](https://Rumi381.github.io/polygen/)
+To access the documentation for any function, class, or method in the project, please visit the official documentation page of polygen [View the Docs](https://Rumi381.github.io/PolyGen/)
 
 ## Example Usage
 
@@ -80,6 +80,25 @@ cohesiveThickness = 0.02
 triangularMesh_minLength = 15
 visualize = True
 saveData = True
+```
+
+## Citation
+
+If you use `polygen` in your research, please cite our paper:
+
+Rumi, M.J.U., Han, HC., Ye, J. et al. Polygen: an efficient framework for polycrystals generation and cohesive zone modeling in arbitrary domains. Engineering with Computers (2025). https://doi.org/10.1007/s00366-025-02180-6
+
+### BibTeX
+
+```bibtex
+@article{rumi2025polygen,
+  title={Polygen: an efficient framework for polycrystals generation and cohesive zone modeling in arbitrary domains},
+  author={Rumi, Md Jalal Uddin and Han, Hai-Chao and Ye, JingYong and Feldman, Marc and Gruslova, Aleksandra and Nolen, Drew and Zeng, Xiaowei},
+  journal={Engineering with Computers},
+  pages={1--21},
+  year={2025},
+  publisher={Springer}
+}
 ```
 
 ## License

@@ -32,7 +32,7 @@ extensions = [
 
 # Theme configuration
 html_theme = 'sphinx_rtd_theme'
-html_baseurl = "https://Rumi381.github.io/polygen/"
+html_baseurl = "https://Rumi381.github.io/PolyGen/"
 html_static_path = ['_static']
 
 # Configure intersphinx mapping
